@@ -3,6 +3,7 @@ import streamlit as st
 from db_handler import DbHandler
 import plotly.express as px
 
+
 def main():
     db_handler = DbHandler()
     if db_handler.conn is None:
@@ -68,7 +69,6 @@ def main():
     # properties
     with st.container():
         with col21:
-            use_thresholds = st.toggle("Use Thresholds", value=False, help="If this is disabled, you will be notified on every price change IF 'Notify me via email' is also set")
             with st.form("properties_form"):
                 url = st.text_input("URL")
                 xpath = st.text_area("XPATH")
@@ -77,29 +77,14 @@ def main():
                 col211, col212, col213 = st.columns([1, 1, 1])
                 # use_thresholds = False
 
+                use_thresholds = st.empty()  # Placeholder
+
                 with col211:
                     update_interval = st.number_input("Update Interval (in minutes)", value=60, min_value=1)
                 with col212:
-                    if use_thresholds:
-                        min_price = st.number_input("Min Price", value=0.0, step=1.0, min_value=0.0, disabled=False, help="Maximum threshold for the price. You will be notified when this is crossed.")
-                    else:
-                        min_price = st.number_input("Min Price", value=0.0, step=1.0, min_value=0.0, disabled=True, help="Maximum threshold for the price. You will be notified when this is crossed.")
+                    min_price = st.empty()
                 with col213:
-                    if use_thresholds:
-                        max_price = st.number_input("Max Price", value=100.0, step=1.0, min_value=0.0, disabled=False, help="Maximum threshold for the price. You will be notified when this is crossed.")
-                    else:
-                        max_price = st.number_input("Max Price", value=100.0, step=1.0, min_value=0.0, disabled=True, help="Maximum threshold for the price. You will be notified when this is crossed.")
-                # with col4:
-
-
-                # if use_thresholds:
-                #     min_price = st.number_input("Min Price", value=0.0, step=1.0, min_value=0.0, disabled=False, help="Maximum threshold for the price. You will be notified when this is crossed.")
-                #     max_price = st.number_input("Max Price", value=100.0, step=1.0, min_value=0.0, disabled=False, help="Maximum threshold for the price. You will be notified when this is crossed.")
-                # else:
-                #     min_price = st.number_input("Min Price", value=0.0, step=1.0, min_value=0.0, disabled=True,
-                #                               help="Maximum threshold for the price. You will be notified when this is crossed.")
-                #     max_price = st.number_input("Max Price", value=100.0, step=1.0, min_value=0.0, disabled=True,
-                #                               help="Maximum threshold for the price. You will be notified when this is crossed.")
+                    max_price = st.empty()
 
                 notify = st.toggle("Notify me via email", value=True)
                 is_active = st.toggle("Active", value=True)
@@ -108,12 +93,31 @@ def main():
 
                 btn_delete = st.form_submit_button("Delete")
                 btn_save = st.form_submit_button("Save")
-        # with col22:
-        #     btn_delete = st.button('Delete')
-        #     btn_save = st.button('Save')
+
+            with use_thresholds:
+                use_thresholds = st.toggle("Use Thresholds", value=False,
+                                           help="If this is disabled, you will be notified on every price change IF 'Notify me via email' is also set")
+
+            with col212:
+                with min_price:
+                    if use_thresholds:
+                        min_price = st.number_input("Min Price", value=0.0, step=1.0, min_value=0.0, disabled=False,
+                                                    help="Maximum threshold for the price. You will be notified when this is crossed.")
+                    else:
+                        min_price = st.number_input("Min Price", value=0.0, step=1.0, min_value=0.0, disabled=True,
+                                                   help="Maximum threshold for the price. You will be notified when this is crossed.")
+            with col213:
+                with max_price:
+                    if use_thresholds:
+                        max_price = st.number_input("Max Price", value=100.0, step=1.0, min_value=0.0, disabled=False,
+                                                    help="Maximum threshold for the price. You will be notified when this is crossed.")
+                    else:
+                        max_price = st.number_input("Max Price", value=100.0, step=1.0, min_value=0.0, disabled=True,
+                                                    help="Maximum threshold for the price. You will be notified when this is crossed.")
 
     with st.container():
         st.write('Authors: Michael Duschek, Carina Hauber, Lukas Seifriedsberger, 2024')
+
 
     # db_handler.close_db()
 

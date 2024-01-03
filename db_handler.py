@@ -1,5 +1,4 @@
 import sqlite3
-import json
 import pandas as pd
 
 
@@ -97,22 +96,6 @@ class DbHandler:
         except sqlite3.Error as e:
             print(f"Error retrieving data: {e}")
             return pd.DataFrame()  # Return an empty DataFrame in case of an error
-
-
-    # Function to retrieve a row by IP from the SQLite database
-    # def retrieve_all_geolocations(self):
-    #     cursor = self.conn.cursor()
-    #
-    #     # Retrieve row by IP address
-    #     cursor.execute("SELECT * FROM ip_geolocation")  # Get column names
-    #     columns = [description[0] for description in cursor.description]
-    #     rows = cursor.fetchall()
-    #     if not rows:
-    #         return None
-    #
-    #     df = pd.DataFrame(rows, columns=columns)
-    #
-    #     return df
 
     def close_db(self):
         if self.conn:
