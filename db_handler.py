@@ -15,7 +15,6 @@ class DbHandler:
         cursor.execute('''CREATE TABLE IF NOT EXISTS tracked_elements (
                             id INTEGER PRIMARY KEY,
                             name VARCHAR(255) NOT NULL,
-                            domain_name VARCHAR(255) NOT NULL,
                             url VARCHAR(2048) NOT NULL,
                             xpath TEXT NOT NULL,
                             update_interval INTEGER NOT NULL,
@@ -27,9 +26,9 @@ class DbHandler:
 
         cursor.execute('''CREATE TABLE IF NOT EXISTS price_history (
                             id INTEGER PRIMARY KEY,
+                            tracked_elements_id INTEGER NOT NULL,
                             current_price DOUBLE NOT NULL,
                             timestamp TIMESTAMP NOT NULL,
-                            tracked_elements_id INTEGER NOT NULL,
                             FOREIGN KEY (tracked_elements_id) REFERENCES tracked_elements (id)
                         )''')
 
@@ -40,10 +39,10 @@ class DbHandler:
         try:
             for index, row in df.iterrows():
                 cursor.execute('''INSERT INTO tracked_elements 
-                                  (name, domain_name, url, xpath, update_interval, min_price_threshold, 
+                                  (name, url, xpath, update_interval, min_price_threshold, 
                                   max_price_threshold, is_active, notify) 
-                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                               (row['name'], row['domain_name'], row['url'], row['xpath'], row['update_interval'],
+                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+                               (row['name'], row['url'], row['xpath'], row['update_interval'],
                                 row['min_price_threshold'], row['max_price_threshold'], row['is_active'],
                                 row['notify']))
             self.conn.commit()
@@ -70,7 +69,7 @@ class DbHandler:
             cursor.execute('''SELECT * FROM tracked_elements''')
             rows = cursor.fetchall()
             if rows:
-                df = pd.DataFrame(rows, columns=['id', 'name', 'domain_name', 'url', 'xpath', 'update_interval',
+                df = pd.DataFrame(rows, columns=['id', 'name', 'url', 'xpath', 'update_interval',
                                                  'min_price_threshold', 'max_price_threshold', 'is_active', 'notify'])
                 print("Tracked elements retrieved successfully!")
                 return df
