@@ -181,9 +181,6 @@ def main(db_handler):
         with st.form("properties_form"):
             name = st.text_input("Name", max_chars=255, value=get_tagged_element_value(edit_row, 'name'), disabled=disabled)
             url = st.text_input("URL", max_chars=2048, value=get_tagged_element_value(edit_row, 'url'), disabled=disabled)
-            if url:
-                if not re.findall(URL_PATTERN, url):  # TODO: check that url cannot be empty
-                    st.error("Please enter a valid URL")
             xpath = st.text_area("XPATH", value=get_tagged_element_value(edit_row, 'xpath'), disabled=disabled)
 
             # Adding input fields for update interval, min price, max price, and a checkbox for active
@@ -221,28 +218,31 @@ def main(db_handler):
                                             help="Maximum threshold for the price. You will be notified when this is crossed.")
 
         if btn_save:
-            form_data = {
-                'name': name,
-                'url': url,
-                'xpath': xpath,
-                'update_interval': update_interval,
-                'min_price_threshold': None,
-                'max_price_threshold': None,
-                'notify': notify,
-                'is_active': is_active
-            }
-            if min_price != st.empty():
-                form_data['min_price_threshold'] = min_price
-                form_data['max_price_threshold'] = max_price
-
-            df = pd.DataFrame([form_data])
-            if len(selection) == 1:
-                st.write(f'Update element {name}')
-                id_ = int(selection['id'].values[0])
-                db_handler.update_tracked_element(id_, df)
+            if url is None or not re.findall(URL_PATTERN, url):
+                st.error("Please enter a valid URL")
             else:
-                st.write(f"Delete element {df['name']}")
-                db_handler.insert_tracked_element(df)
+                form_data = {
+                    'name': name,
+                    'url': url,
+                    'xpath': xpath,
+                    'update_interval': update_interval,
+                    'min_price_threshold': None,
+                    'max_price_threshold': None,
+                    'notify': notify,
+                    'is_active': is_active
+                }
+                if min_price != st.empty():
+                    form_data['min_price_threshold'] = min_price
+                    form_data['max_price_threshold'] = max_price
+
+                df = pd.DataFrame([form_data])
+                if len(selection) == 1:
+                    st.write(f'Update element {name}')
+                    id_ = int(selection['id'].values[0])
+                    db_handler.update_tracked_element(id_, df)
+                else:   # form is disabled if there is more than 1 selection, so this means no selections
+                    st.write(f"Insert element {df['name']}")
+                    db_handler.insert_tracked_element(df)
 
         if btn_delete:
             st.write(f"Delete item: {selection['name']}")
