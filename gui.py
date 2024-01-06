@@ -243,11 +243,13 @@ def main(db_handler):
                 else:   # form is disabled if there is more than 1 selection, so this means no selections
                     st.write(f"Insert element {df['name']}")
                     db_handler.insert_tracked_element(df)
+                    st.experimental_rerun()     # necessary to update the selection list
 
         if btn_delete:
             st.write(f"Delete item: {selection['name']}")
             ids = selection['id'].tolist()
             db_handler.delete_tracked_element_by_id(ids)
+            st.experimental_rerun()     # necessary to update the selection list
 
 
     with st.container():
