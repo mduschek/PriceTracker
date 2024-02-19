@@ -56,6 +56,8 @@ class Crawly:
         job_thread = threading.Thread(target=self.execute_task, args=[row])
         job_thread.start()
 
+    # Function to extract text content of an element using JavaScript
+
     def execute_task(self, tracked_element):
         print('Grabbing', tracked_element['name'], tracked_element['url'])
         url = tracked_element['url']
@@ -74,17 +76,24 @@ class Crawly:
             driver.get(url)
 
             # Wait for the element to be present on the page
-            element = WebDriverWait(driver, 100).until(
-                ec.presence_of_element_located((By.XPATH, xpath))
-            )
+            try:
+                element = driver.find_element(By.XPATH, xpath)
+            except:
+                element = driver.find_element(By.CSS_SELECTOR, xpath)
+
+            # element = WebDriverWait(driver, 20).until(
+            #     # ec.presence_of_element_located((By.XPATH, xpath))
+            #     ec.presence_of_element_located((By.CSS_SELECTOR, xpath))
+            #     # ec.presence_of_element_located((By.CLASS_NAME, xpath))
+            # )
 
             # Extract the element text
             if element:
-                print(element.text)
+                print("Price found:", tracked_element['name'] + ":", element.get_attribute("textContent"))
+                # print(element.get_attribute("textContent"))
 
                 #todo probably doesnt work yet, untested
-                current_price = element.text
-                # insert_data(1, 11)
+                current_price = element.get_attribute("textContent")
                 # insert_data(tracked_element['id'], current_price)
             else:
                 print("Element not found")
