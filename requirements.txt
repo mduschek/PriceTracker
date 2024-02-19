@@ -4,4 +4,5 @@ plotly==5.18.0
 python-dotenv==1.0.0
 Requests==2.31.0
 selenium==4.16.0
-streamlit==1.29.0
+streamlit==1.31.1
+schedule~=1.2.1

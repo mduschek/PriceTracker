@@ -1,16 +1,16 @@
 import threading
 import time
 
-import requests
+# import requests
 import schedule
-from bs4 import BeautifulSoup
+# from bs4 import BeautifulSoup
 
 from selenium import webdriver
 from selenium.common import WebDriverException
 from selenium.webdriver.common.by import By
 
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support import expected_conditions as ec
 
 
 from db_handler import DbHandler
@@ -58,8 +58,12 @@ class Crawly:
         url = tracked_element['url']
         xpath = tracked_element['xpath']
 
+        # Pretend being a Human browsing the web
+        user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.3"
+
         firefox_options = webdriver.FirefoxOptions()
-        firefox_options.add_argument('--headless')
+        # firefox_options.add_argument('--headless')
+        firefox_options.add_argument(f'user-agent={user_agent}')
         firefox_options.add_argument('--disable-gpu')
         driver = webdriver.Firefox(options=firefox_options)
 
@@ -67,8 +71,8 @@ class Crawly:
             driver.get(url)
 
             # Wait for the element to be present on the page
-            element = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, xpath))
+            element = WebDriverWait(driver, 100).until(
+                ec.presence_of_element_located((By.XPATH, xpath))
             )
 
             # Extract the element text
@@ -78,9 +82,11 @@ class Crawly:
                 print("Element not found")
 
         except WebDriverException as e:
-            print(f"Selenium WebDriver error: {e}")
+            print("Selenium WebDriver error")
+            # print(f"Selenium WebDriver error: {e}")
         except Exception as ex:
-            print(f"An error occurred: {ex}")
+            print("An error occurred")
+            # print(f"An error occurred: {ex}")
 
         finally:
             driver.quit()  # Close the browser session
