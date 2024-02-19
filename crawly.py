@@ -11,6 +11,9 @@ from selenium.webdriver.common.by import By
 
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
+import pandas as pd
+import datetime
+
 
 
 from db_handler import DbHandler
@@ -78,6 +81,11 @@ class Crawly:
             # Extract the element text
             if element:
                 print(element.text)
+
+                #todo probably doesnt work yet, untested
+                current_price = element.text
+                # insert_data(1, 11)
+                # insert_data(tracked_element['id'], current_price)
             else:
                 print("Element not found")
 
@@ -91,6 +99,15 @@ class Crawly:
         finally:
             driver.quit()  # Close the browser session
 
+def instert_data(tracked_elements_id, current_price):
+    data = {
+        "tracked_elements_id": [tracked_elements_id],
+        "current_price": [current_price],
+        "timestamp": [datetime.datetime.now()]
+    }
+
+    df = pd.DataFrame(data)
+    db_handler.insert_price_history(df)
 
 if __name__ == '__main__':
     print("Starting Scheduler...")
