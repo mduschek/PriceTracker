@@ -119,6 +119,13 @@ def _init_example_data():
         db_handler.insert_price_history(df)
 
 
+def reset_checkboxes():
+    pass
+    #df_with_selections['Select'] = False
+    #st.session_state["p"] = False
+# TODO: selection does not yet unselect all items properly in the GUI
+
+
 def main(db_handler):
     selected_element = None
 
@@ -149,8 +156,9 @@ def main(db_handler):
     with st.container():
         with col12:
             # select_df, selection = dataframe_with_selections(df_tracked_elements)
+            btn_add = st.button('Add', use_container_width=True, on_click=reset_checkboxes)
             selection = dataframe_with_selections(df_tracked_elements)
-            # btn_add = st.button('Add', use_container_width=True)
+
             # if btn_add:
                 # TODO: selection does not yet unselect all items properly in the GUI
                 # dataframe_with_selections(df_tracked_elements)
@@ -231,9 +239,9 @@ def main(db_handler):
                     'notify': notify,
                     'is_active': is_active
                 }
-                if min_price != st.empty():
-                    form_data['min_price_threshold'] = min_price
-                    form_data['max_price_threshold'] = max_price
+            if min_price != st.empty():
+                form_data['min_price_threshold'] = min_price
+                form_data['max_price_threshold'] = max_price
 
                 df = pd.DataFrame([form_data])
                 if len(selection) == 1:
