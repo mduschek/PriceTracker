@@ -1,10 +1,11 @@
+import re
+
 import pandas as pd
+import plotly.express as px
 import streamlit as st
-import threading
+
 from crawly import Crawly
 from db_handler import DbHandler
-import plotly.express as px
-import re
 
 # https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url
 URL_PATTERN = r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)"
@@ -119,11 +120,8 @@ def _init_example_data():
         db_handler.insert_price_history(df)
 
 
-def reset_checkboxes():
-    pass
-    #df_with_selections['Select'] = False
-    #st.session_state["p"] = False
-# TODO: selection does not yet unselect all items properly in the GUI
+#def reset_checkboxes():
+    #call this when add button is clicked
 
 
 def main(db_handler):
@@ -156,7 +154,7 @@ def main(db_handler):
     with st.container():
         with col12:
             # select_df, selection = dataframe_with_selections(df_tracked_elements)
-            btn_add = st.button('Add', use_container_width=True, on_click=reset_checkboxes)
+            #btn_add = st.button('Add', use_container_width=True, on_click=reset_checkboxes)
             selection = dataframe_with_selections(df_tracked_elements)
 
             # if btn_add:
@@ -172,9 +170,8 @@ def main(db_handler):
                 merged_df = pd.merge(df_price_history, selection[['id', 'name']], left_on='tracked_elements_id', right_on='id',
                                      how='left')
 
-                # TODO: truncate the names of the products in the legend
-                # merged_df['name'] = merged_df['name'].apply(
-                #     lambda name: name[:10] + '...' if len(name) > 10 else name)
+                # truncate the names of the products in the legend
+                merged_df['name'] = merged_df['name'].apply(lambda name: (name[:10] + '...') if len(name) > 10 else name)
 
                 display_line_plot(merged_df)
             else:
@@ -251,13 +248,13 @@ def main(db_handler):
                 else:   # form is disabled if there is more than 1 selection, so this means no selections
                     st.write(f"Insert element {df['name']}")
                     db_handler.insert_tracked_element(df)
-                    st.experimental_rerun()     # necessary to update the selection list
+                    st.rerun()     # necessary to update the selection list
 
         if btn_delete:
             st.write(f"Delete item: {selection['name']}")
             ids = selection['id'].tolist()
             db_handler.delete_tracked_element_by_id(ids)
-            st.experimental_rerun()     # necessary to update the selection list
+            st.rerun()     # necessary to update the selection list
 
 
     with st.container():
