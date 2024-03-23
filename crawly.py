@@ -2,15 +2,14 @@ import re
 import threading
 import time
 import traceback
-import schedule
-import pandas as pd
-# import requests
-# from bs4 import BeautifulSoup
+from datetime import datetime
 
+import pandas as pd
+import schedule
 from selenium import webdriver
 from selenium.common import WebDriverException
 from selenium.webdriver.common.by import By
-from datetime import datetime
+
 from db_handler import DbHandler
 
 
@@ -19,7 +18,6 @@ class Crawly:
     scheduled_tasks = None
 
     def __init__(self, _db_handler: DbHandler):
-        # print("Crawly init")
         self.db_handler = _db_handler
         if self.db_handler.conn is None:
             self.db_handler.init_db()
@@ -41,8 +39,7 @@ class Crawly:
 
     def add_job(self, task):
         job = schedule.every(task['update_interval']).minutes
-        # job.do(lambda te=row: self.run_threaded(self.execute_task(te)))
-        return job.do(self.run_threaded, task['id'])
+        job.do(self.run_threaded, task['id'])
 
     def run_scheduler(self):
         schedule.run_all()
