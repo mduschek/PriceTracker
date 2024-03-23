@@ -71,6 +71,8 @@ class Crawly:
         firefox_options.add_argument('--disable-gpu')
         driver = webdriver.Firefox(options=firefox_options)
 
+        extracted_price = -1
+
         try:
             driver.get(url)
 
@@ -115,6 +117,7 @@ class Crawly:
 
         finally:
             driver.quit()  # Close the browser session
+            return extracted_price
 
 
 def extract_price(text, pattern):

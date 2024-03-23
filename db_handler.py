@@ -43,8 +43,8 @@ class DbHandler:
             for index, row in df.iterrows():
                 cursor.execute('''INSERT INTO tracked_elements 
                                   (name, url, xpath, update_interval, min_price_threshold, 
-                                  max_price_threshold, is_active, notify) 
-                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+                                  max_price_threshold, is_active, notify, regex) 
+                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                                (row['name'], row['url'], row['xpath'], row['update_interval'],
                                 row['min_price_threshold'], row['max_price_threshold'], row['is_active'],
                                 row['notify'], row.get('regex', '')))
@@ -60,7 +60,7 @@ class DbHandler:
                 cursor.execute('''UPDATE tracked_elements 
                                   SET name=?, url=?, xpath=?, update_interval=?, 
                                       min_price_threshold=?, max_price_threshold=?, 
-                                      is_active=?, notify=? 
+                                      is_active=?, notify=?, regex=? 
                                   WHERE id=?''',
                                (row['name'], row['url'], row['xpath'], row['update_interval'],
                                 row['min_price_threshold'], row['max_price_threshold'], row['is_active'],
@@ -91,7 +91,7 @@ class DbHandler:
             rows = cursor.fetchall()
             if rows:
                 df = pd.DataFrame(rows, columns=['id', 'name', 'url', 'xpath', 'update_interval',
-                                                 'min_price_threshold', 'max_price_threshold', 'is_active', 'notify'])
+                                                 'min_price_threshold', 'max_price_threshold', 'is_active', 'notify', 'regex'])
                 # print("Tracked elements retrieved successfully!")
                 return df
             else:

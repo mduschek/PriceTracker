@@ -127,6 +127,10 @@ def _init_example_data():
 #def reset_checkboxes():
     #call this when add button is clicked
 
+def one_time_track(item):
+    print(item)
+    return Crawly.execute_task(None, item)
+    # scheduler.run()
 
 def main(db_handler):
     selected_element = None
@@ -236,6 +240,7 @@ def main(db_handler):
                     'name': name,
                     'url': url,
                     'xpath': xpath,
+                    'regex': regex,
                     'update_interval': update_interval,
                     'min_price_threshold': None,
                     'max_price_threshold': None,
@@ -246,7 +251,14 @@ def main(db_handler):
                 form_data['min_price_threshold'] = min_price
                 form_data['max_price_threshold'] = max_price
 
+                extracted_price = one_time_track(form_data)
+                if (extracted_price != -1):
+
+                    pass
+
+
                 df = pd.DataFrame([form_data])
+
                 if len(selection) == 1:
                     st.write(f'Update element {name}')
                     id_ = int(selection['id'].values[0])
@@ -255,6 +267,8 @@ def main(db_handler):
                     st.write(f"Insert element {df['name']}")
                     db_handler.insert_tracked_element(df)
                     st.rerun()     # necessary to update the selection list
+
+
 
         if btn_delete:
             st.write(f"Delete item: {selection['name']}")
@@ -271,7 +285,7 @@ def main(db_handler):
 # st.cache_data prevents this to be executed on every page reload
 @st.cache_data
 def start_crawly(_db_handler):
-    print("RUN CRAWLY!")
+    print("STARTING CRAWLY")
     scheduler = Crawly(_db_handler)
     scheduler.run()
 
