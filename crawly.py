@@ -1,18 +1,15 @@
 import re
 import threading
 import time
-
-# import requests
+import traceback
 import schedule
+import pandas as pd
+# import requests
 # from bs4 import BeautifulSoup
 
 from selenium import webdriver
 from selenium.common import WebDriverException
 from selenium.webdriver.common.by import By
-
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as ec
-import pandas as pd
 from datetime import datetime
 from db_handler import DbHandler
 
@@ -65,11 +62,14 @@ class Crawly:
         _db_handler = DbHandler()
         _db_handler.init_db()
 
+        # element is supplied if the function is executed while the element is not yet saved to the db
+        # otherwise load tracked_element from the database
         if not element:
             tracked_element = _db_handler.retrieve_tracked_element_by_id(element_id)
             print('Grabbing', tracked_element['name'])
         else:
             tracked_element = element
+            element_id = tracked_element["id"]
 
         url = tracked_element['url']
         xpath = tracked_element['xpath']
@@ -89,22 +89,20 @@ class Crawly:
         try:
             driver.get(url)
 
+            html_element = None
             # Wait for the element to be present on the page
             try:
-                element = driver.find_element(By.XPATH, xpath)
+                html_element = driver.find_element(By.XPATH, xpath)
             except:
-                element = driver.find_element(By.CSS_SELECTOR, xpath)
-
-            # element = WebDriverWait(driver, 20).until(
-            #     # ec.presence_of_element_located((By.XPATH, xpath))
-            #     ec.presence_of_element_located((By.CSS_SELECTOR, xpath))
-            #     # ec.presence_of_element_located((By.CLASS_NAME, xpath))
-            # )
+                try:
+                    html_element = driver.find_element(By.CSS_SELECTOR, xpath)
+                except:
+                    print("no price found")
 
             # Extract the element text
-            if element:
-                textContent = element.get_attribute("textContent")
-                price_str = extract_price(textContent, regex)
+            if html_element:
+                text_content = html_element.get_attribute("textContent")
+                price_str = extract_price(text_content, regex)
                 if price_str:
                     try:
                         extracted_price = float(price_str)
@@ -116,8 +114,9 @@ class Crawly:
                         # on the press of the save button the element is not yet in the database.
                         # therefore it will be created at this point as a valid price was found.
                         # otherwise, the price is inserted for the existing element ID
-                        if element_id == 1:
-                            _db_handler.insert_tracked_element(element)
+                        if element_id == -1:
+                            element["id"] = None
+                            element_id = _db_handler.insert_tracked_element(pd.DataFrame(element, index=[0]))
                             print("New tracked element inserted into DB")
 
                         # Create the DataFrame
@@ -126,11 +125,14 @@ class Crawly:
                             'current_price': [extracted_price],
                             'timestamp': [current_timestamp]
                         })
+                        # print(df)
+
                         if _db_handler.insert_price_history(df):
                             print("Price inserted into DB")
 
                     except ValueError:
                         print(f"Could not convert extracted price to float: {price_str}")
+                        print(traceback.format_exc())
                 else:
                     print("Could not extract price")
             else:
@@ -138,9 +140,10 @@ class Crawly:
 
         except WebDriverException:
             print("Selenium WebDriver error")
-        except Exception as e:
-            print(e)
-            # print("An error occurred")
+        except Exception:
+            print(traceback.format_exc())
+
+        # print("An error occurred")
 
         finally:
             driver.quit()  # Close the browser session

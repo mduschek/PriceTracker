@@ -50,6 +50,8 @@ class DbHandler:
                                 row['notify'], row['regex']))
             self.conn.commit()
             # print("Data inserted successfully!")
+            print(cursor.lastrowid)
+            return cursor.lastrowid     # return new id
         except sqlite3.Error as e:
             print(f"Error inserting data: {e}")
 

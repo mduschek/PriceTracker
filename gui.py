@@ -38,6 +38,8 @@ def get_tagged_element_value(row, col, default=None):
 
 
 def display_line_plot(df, title="", height=500):
+    print(df)
+
     fig_price_history = px.line(df, x='timestamp', y='current_price', color='name',
                                 labels={'timestamp': 'Timestamp', 'current_price': 'Current Price in €',
                                         'name': 'Tracked Element'},
@@ -138,9 +140,17 @@ def one_time_track(item):
     # scheduler.run()
 
 
-def main(db_handler):
-    selected_element = None
+def isNotUnique(name, df_tracked_elements):
+    return name in df_tracked_elements['name'].values
 
+
+def get_all_names(self):
+    with self.conn.cursor() as cursor:
+        cursor.execute("SELECT DISTINCT name FROM tracked_elements")
+        return [row[0] for row in cursor.fetchall()]
+
+
+def main(db_handler):
     # _init_example_data()
 
     df_tracked_elements = db_handler.retrieve_tracked_elements()
@@ -169,11 +179,7 @@ def main(db_handler):
         with col11:
             df_price_history = db_handler.retrieve_price_history(selection['id'].tolist())
             if not selection.empty and not df_price_history.empty:
-                merged_df = pd.merge(df_price_history, selection[['id', 'name']], left_on='tracked_elements_id', right_on='id',
-                                     how='left')
-
-                # truncate the names of the products in the legend
-                merged_df['name'] = merged_df['name'].apply(lambda name: (name[:10] + '...') if len(name) > 10 else name)
+                merged_df = pd.merge(df_price_history, selection[['id', 'name']], left_on='tracked_elements_id', right_on='id', how='left', suffixes=('_price_history', '_selection'))
 
                 display_line_plot(merged_df)
             else:
