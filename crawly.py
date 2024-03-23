@@ -1,3 +1,4 @@
+import re
 import threading
 import time
 
@@ -59,6 +60,7 @@ class Crawly:
         print('Grabbing', tracked_element['name'], tracked_element['url'])
         url = tracked_element['url']
         xpath = tracked_element['xpath']
+        regex = tracked_element['regex']
 
         # Pretend being a Human browsing the web
         user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.3"
@@ -86,8 +88,21 @@ class Crawly:
 
             # Extract the element text
             if element:
-                print("Price found:", tracked_element['name'] + ":", element.get_attribute("textContent"))
-                # print(element.get_attribute("textContent"))
+                textContent = element.get_attribute("textContent")
+                print("Price found:", tracked_element['name'] + ":", textContent)
+                price_str = extract_price(textContent, regex)
+
+                if price_str:
+                    try:
+                        extracted_price = float(price_str)
+                        print(f"Extracted price as float: {extracted_price}")
+                        # Now you can save price_float to the database
+
+                    except ValueError:
+                        print(f"Could not convert extracted price to float: {price_str}")
+                else:
+                    print("Could not extract price")
+
             else:
                 print("Element not found")
 
@@ -101,6 +116,12 @@ class Crawly:
         finally:
             driver.quit()  # Close the browser session
 
+
+def extract_price(text, pattern):
+    match = re.search(pattern, text)
+    if match:
+        return match.group().replace(',', '.').replace('€', '')
+    return None
 
 if __name__ == '__main__':
     print("Starting Scheduler...")

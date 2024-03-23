@@ -9,6 +9,7 @@ from db_handler import DbHandler
 
 # https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url
 URL_PATTERN = r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)"
+REGEX_DEFAULT_PATTERN = r"[-+]?\s*\d{1,3}(?:\s*\.\s*\d{3})*\s*(?:,\s*\d+)?|\d{1,3}(?:\s*,\s*\d{3})*\s*(?:\.\s*\d+)?"
 
 
 def dataframe_with_selections(df):
@@ -21,7 +22,7 @@ def dataframe_with_selections(df):
         hide_index=True,
         column_config={"Select": st.column_config.CheckboxColumn(required=True), "name": "Name", "id": None,
                        "url": None, "xpath": None, "update_interval": None, "min_price_threshold": None,
-                       "max_price_threshold": None, "is_active": None, "notify": None},
+                       "max_price_threshold": None, "is_active": None, "notify": None, "regex": None},
         disabled=df.columns,
         use_container_width=True,
     )
@@ -32,6 +33,7 @@ def dataframe_with_selections(df):
 
 
 def get_tagged_element_value(row, col, default=None):
+    #print(row[col])
     return row[col] if row is not None and not pd.isna(row[col]) else default
 
 
@@ -56,7 +58,8 @@ def _init_example_data():
         'min_price_threshold': [50.0],
         'max_price_threshold': [100.0],
         'is_active': [True],
-        'notify': [True]
+        'notify': [True],
+        'regex': REGEX_DEFAULT_PATTERN
     }
     tracked_elem_2 = {
         'name': ["Amazon Satisfyer"],
@@ -68,7 +71,8 @@ def _init_example_data():
         'min_price_threshold': [69.0],
         'max_price_threshold': None,
         'is_active': [False],
-        'notify': [False]
+        'notify': [False],
+        'regex': REGEX_DEFAULT_PATTERN
     }
     df1 = pd.DataFrame(tracked_elem_1)
     df2 = pd.DataFrame(tracked_elem_2)
@@ -186,7 +190,8 @@ def main(db_handler):
         with st.form("properties_form"):
             name = st.text_input("Name", max_chars=255, value=get_tagged_element_value(edit_row, 'name'), disabled=disabled)
             url = st.text_input("URL", max_chars=2048, value=get_tagged_element_value(edit_row, 'url'), disabled=disabled)
-            xpath = st.text_area("XPATH", value=get_tagged_element_value(edit_row, 'xpath'), disabled=disabled)
+            xpath = st.text_area("CSS Selector (recommended) / XPATH", value=get_tagged_element_value(edit_row, 'xpath'), disabled=disabled)
+            regex = st.text_area("Regex", value=get_tagged_element_value(edit_row, 'regex', REGEX_DEFAULT_PATTERN), disabled=disabled)
 
             # Adding input fields for update interval, min price, max price, and a checkbox for active
             col211, col212, col213 = st.columns([1, 1, 1])
@@ -203,6 +208,7 @@ def main(db_handler):
             with col213:
                 max_price = st.empty()
 
+            # TODO maybe delete/change in case we dont use notifications
             notify = st.toggle("Notify me via email", value=get_tagged_element_value(edit_row, 'notify', default=True), disabled=disabled)
             is_active = st.toggle("Active", value=get_tagged_element_value(edit_row, 'is_active', default=True), disabled=disabled)
 
@@ -278,6 +284,5 @@ if __name__ == '__main__':
     if db_handler.conn is None:
         db_handler.init_db()
 
-    # start_crawly(db_handler)
+    start_crawly(db_handler)
     main(db_handler)
-

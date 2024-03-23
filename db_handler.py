@@ -17,12 +17,15 @@ class DbHandler:
                             name VARCHAR(255) NOT NULL,
                             url VARCHAR(2048) NOT NULL,
                             xpath TEXT NOT NULL,
+                            regex TEXT NOT NULL,
                             update_interval INTEGER NOT NULL,
                             min_price_threshold DOUBLE,
                             max_price_threshold DOUBLE,
                             is_active BOOLEAN NOT NULL DEFAULT TRUE,
                             notify BOOLEAN NOT NULL DEFAULT TRUE
                         )''')
+
+        #cursor.execute('''ALTER TABLE tracked_elements ADD COLUMN regex TEXT''')
 
         cursor.execute('''CREATE TABLE IF NOT EXISTS price_history (
                             id INTEGER PRIMARY KEY,
@@ -44,7 +47,7 @@ class DbHandler:
                                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
                                (row['name'], row['url'], row['xpath'], row['update_interval'],
                                 row['min_price_threshold'], row['max_price_threshold'], row['is_active'],
-                                row['notify']))
+                                row['notify'], row.get('regex', '')))
             self.conn.commit()
             # print("Data inserted successfully!")
         except sqlite3.Error as e:
@@ -61,7 +64,7 @@ class DbHandler:
                                   WHERE id=?''',
                                (row['name'], row['url'], row['xpath'], row['update_interval'],
                                 row['min_price_threshold'], row['max_price_threshold'], row['is_active'],
-                                row['notify'], int(id_)))
+                                row['notify'], row.get('regex', ''), int(id_)))
                 print(f"Done updating row {index + 1}/{len(df)}. Rows affected: {cursor.rowcount}")
             self.conn.commit()
             print("Data updated successfully!")
