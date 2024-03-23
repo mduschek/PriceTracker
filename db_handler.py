@@ -47,7 +47,7 @@ class DbHandler:
                                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                                (row['name'], row['url'], row['xpath'], row['update_interval'],
                                 row['min_price_threshold'], row['max_price_threshold'], row['is_active'],
-                                row['notify'], row.get('regex', '')))
+                                row['notify'], row['regex']))
             self.conn.commit()
             # print("Data inserted successfully!")
         except sqlite3.Error as e:

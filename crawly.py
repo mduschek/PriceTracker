@@ -1,3 +1,4 @@
+import re
 import threading
 import time
 
@@ -93,29 +94,43 @@ class Crawly:
             # Extract the element text
             if element:
                 textContent = element.get_attribute("textContent")
-                print("Price found:", tracked_element['name'] + ":", textContent)
                 price_str = extract_price(textContent, regex)
-
                 if price_str:
                     try:
                         extracted_price = float(price_str)
-                        print(f"Extracted price as float: {extracted_price}")
-                        # Now you can save price_float to the database
+                        print(f"Extracted Price: {extracted_price}")
+
+                        # Get the current system timestamp
+                        current_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+                        # on the press of the save button the element is not yet in the database.
+                        # therefore it will be created at this point as a valid price was found.
+                        # otherwise, the price is inserted for the existing element ID
+                        if element_id == 1:
+                            _db_handler.insert_tracked_element(element)
+                            print("New tracked element inserted into DB")
+
+                        # Create the DataFrame
+                        df = pd.DataFrame({
+                            'tracked_elements_id': [element_id],
+                            'current_price': [extracted_price],
+                            'timestamp': [current_timestamp]
+                        })
+                        if _db_handler.insert_price_history(df):
+                            print("Price inserted into DB")
 
                     except ValueError:
                         print(f"Could not convert extracted price to float: {price_str}")
                 else:
                     print("Could not extract price")
-
             else:
                 print("Element not found")
 
-        except WebDriverException as e:
+        except WebDriverException:
             print("Selenium WebDriver error")
-            # print(f"Selenium WebDriver error: {e}")
-        except Exception as ex:
-            print("An error occurred")
-            # print(f"An error occurred: {ex}")
+        except Exception as e:
+            print(e)
+            # print("An error occurred")
 
         finally:
             driver.quit()  # Close the browser session
@@ -125,8 +140,25 @@ class Crawly:
 def extract_price(text, pattern):
     match = re.search(pattern, text)
     if match:
-        return match.group().replace(',', '.').replace('€', '')
+        number_str = match.group()
+
+        # number_str somehow gets treated as bytes
+        if isinstance(number_str, bytes):
+            number_str = number_str.decode('utf-8')
+
+        # replace all separators with .
+        number_str = number_str.replace(',', '.')
+
+        # find indices of separators
+        separators = [m.start() for m in re.finditer(r'[.]', number_str)]
+
+        # delete all separators except last one
+        if len(separators) > 1:
+            for i in separators[:-1]:
+                number_str = number_str[:i] + '' + number_str[i + 1:]
+        return number_str
     return None
+
 
 def instert_data(tracked_elements_id, current_price):
     data = {

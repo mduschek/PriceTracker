@@ -9,7 +9,7 @@ from db_handler import DbHandler
 
 # https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url
 URL_PATTERN = r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)"
-REGEX_DEFAULT_PATTERN = r"[-+]?\s*\d{1,3}(?:\s*\.\s*\d{3})*\s*(?:,\s*\d+)?|\d{1,3}(?:\s*,\s*\d{3})*\s*(?:\.\s*\d+)?"
+REGEX_DEFAULT_PATTERN = r"[-+]?\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)"
 
 
 def dataframe_with_selections(df):
@@ -26,6 +26,7 @@ def dataframe_with_selections(df):
         disabled=df.columns,
         use_container_width=True,
     )
+
 
     # Filter the dataframe using the temporary column, then drop the column
     selected_rows = edited_df[edited_df.Select]
@@ -132,6 +133,7 @@ def one_time_track(item):
     return Crawly.execute_task(None, item)
     # scheduler.run()
 
+
 def main(db_handler):
     selected_element = None
 
@@ -164,6 +166,7 @@ def main(db_handler):
             # select_df, selection = dataframe_with_selections(df_tracked_elements)
             #btn_add = st.button('Add', use_container_width=True, on_click=reset_checkboxes)
             selection = dataframe_with_selections(df_tracked_elements)
+            btn_delete = st.button("Delete", disabled=len(selection) != 1) # onclick did not work unfortunately
 
             # if btn_add:
                 # TODO: selection does not yet unselect all items properly in the GUI
