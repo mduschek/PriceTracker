@@ -34,7 +34,6 @@ def dataframe_with_selections(df):
 
 
 def get_tagged_element_value(row, col, default=None):
-    #print(row[col])
     return row[col] if row is not None and not pd.isna(row[col]) else default
 
 
@@ -45,6 +44,11 @@ def display_line_plot(df, title="", height=500):
                                 text="current_price",
                                 height=height)
     fig_price_history.update_traces(textposition="top center")
+
+    # Update legend to show truncated names
+    for trace in fig_price_history.data:
+        trace.name = (trace.name[:10] + '...') if len(trace.name) > 10 else trace.name
+
     fig_price_history.update_layout(title_text=title)
     st.plotly_chart(fig_price_history, use_container_width=True)
 
@@ -182,11 +186,15 @@ def main(db_handler):
         edit_row = selection.iloc()[0].copy() if len(selection) == 1 else None
         is_disabled = len(selection) > 1
 
+
         with st.form("properties_form"):
             name = st.text_input("Name", max_chars=255, value=get_tagged_element_value(edit_row, 'name'), disabled=is_disabled)
             url = st.text_input("URL", max_chars=2048, value=get_tagged_element_value(edit_row, 'url'), disabled=is_disabled)
             xpath = st.text_area("CSS Selector (recommended) / XPATH", value=get_tagged_element_value(edit_row, 'xpath'), disabled=is_disabled)
-            regex = st.text_area("Regex", value=get_tagged_element_value(edit_row, 'regex', REGEX_DEFAULT_PATTERN), disabled=is_disabled)
+            regex = st.text_area("Regex (leave empty for default value)", value=get_tagged_element_value(edit_row, 'regex'), disabled=is_disabled, placeholder=REGEX_DEFAULT_PATTERN)
+
+            # we need to print this since otherwise streamlit caches the regex value and displays it even if we select a different item!
+            #print(f"regex reloaded: {regex}")
 
             # Adding input fields for update interval, min price, max price, and a checkbox for active
             col211, col212, col213 = st.columns([1, 1, 1])
@@ -222,49 +230,55 @@ def main(db_handler):
                 max_price = st.number_input("Max Price", value=get_tagged_element_value(edit_row, 'max_price_threshold'), step=1.0, min_value=0.0, disabled=not use_thresholds or is_disabled,
                                             help="Maximum threshold for the price. You will be notified when this is crossed.")
 
-        if(btn_delete):
-            st.write(f"Delete item: {selection['name']}")
-            print(f"Delete item: {selection['name']}")
-            ids = selection['id'].tolist()
-            db_handler.delete_tracked_element_by_id(ids)
-            st.rerun()  # necessary to update the selection list
+        if btn_delete:
+            with st.spinner('Loading...'):
+                st.write(f"Delete item: {selection['name']}")
+                print(f"Delete item: {selection['name']}")
+                ids = selection['id'].tolist()
+                db_handler.delete_tracked_element_by_id(ids)
+                st.rerun()  # necessary to update the selection list
 
         if btn_save:
-            print("save pressed")
-            if url is None or not re.findall(URL_PATTERN, url):
-                st.error("Please enter a valid URL")
-            else:
-                form_data = {
-                    'name': name,
-                    'url': url,
-                    'xpath': xpath,
-                    'regex': regex,
-                    'update_interval': update_interval,
-                    'min_price_threshold': None,
-                    'max_price_threshold': None,
-                    'notify': notify,
-                    'is_active': is_active
-                }
-            if min_price != st.empty():
-                form_data['min_price_threshold'] = min_price
-                form_data['max_price_threshold'] = max_price
+            with st.spinner('Loading...'):
+                #print("save pressed")
+                if url is None or not re.findall(URL_PATTERN, url):
+                    st.error("Please enter a valid URL")
+                elif isNotUnique(name, df_tracked_elements):
+                    st.error("Please enter a unique name")
+                else:
+                    form_data = {
+                        'id': get_tagged_element_value(edit_row, "id", -1),
+                        'name': name,
+                        'url': url,
+                        'xpath': xpath,
+                        'regex': regex.strip() if regex and regex.strip() else REGEX_DEFAULT_PATTERN,   # use placeholder value if nothing else was specified
+                        'update_interval': update_interval,
+                        'min_price_threshold': None,
+                        'max_price_threshold': None,
+                        'notify': notify,
+                        'is_active': is_active
+                    }
+                    if min_price != st.empty():
+                        form_data['min_price_threshold'] = min_price
+                        form_data['max_price_threshold'] = max_price
 
-                extracted_price = one_time_track(form_data) # if this worked, the new element was already inserted by crawly
-                if extracted_price == -1:
-                    st.error("Failed extracting a price. Please change your parameters")
-                    pass
+                        extracted_price = one_time_track(form_data) # if this worked, the new element was already inserted by crawly
 
-                df = pd.DataFrame([form_data])
+                        if extracted_price == -1:
+                            st.error("Failed extracting a price. Please change your parameters")
+                        else:
+                            df = pd.DataFrame([form_data])
 
-                if len(selection) == 1:
-                    st.write(f'Update element {name}')
-                    id_ = int(selection['id'].values[0])
-                    db_handler.update_tracked_element(id_, df)
-                else:   # form is disabled if there is more than 1 selection, so this means no selections
-                    st.write(f"Insert element {df['name']}")
-                    # crawly inserted the element into the DB already
-                    # db_handler.insert_tracked_element(df)
-                    st.rerun()     # necessary to update the selection list
+                            if len(selection) == 1:
+                                id_ = int(selection['id'].values[0])
+                                db_handler.update_tracked_element(id_, df)
+                                st.write(f'Updated element {name}')
+                            else:   # form is disabled if there is more than 1 selection, so this means no selections
+                                # crawly inserted the element into the DB already
+                                # db_handler.insert_tracked_element(df)
+                                st.write(f"Inserted element {df['name']}")
+                                st.rerun()     # necessary to update the selection list
+            #TODO after adding a new item, the textboxes in the form should be reset!
 
 
     with st.container():
