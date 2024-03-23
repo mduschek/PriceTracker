@@ -13,10 +13,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 import pandas as pd
-import datetime
-
-
-
+from datetime import datetime
 from db_handler import DbHandler
 
 
@@ -25,7 +22,7 @@ class Crawly:
     scheduled_tasks = None
 
     def __init__(self, _db_handler: DbHandler):
-        print("Crawly init")
+        # print("Crawly init")
         self.db_handler = _db_handler
         if self.db_handler.conn is None:
             self.db_handler.init_db()
@@ -34,10 +31,8 @@ class Crawly:
         df_tracked_elements = self.db_handler.retrieve_tracked_elements()
 
         # create tasks
-        for _, row in df_tracked_elements.iterrows():
-            job = schedule.every(row['update_interval']).minutes
-            # job.do(lambda te=row: self.run_threaded(self.execute_task(te)))
-            job.do(self.run_threaded, row)
+        for _, task in df_tracked_elements.iterrows():
+            job = self.add_job(task)
 
         print(schedule.get_jobs())
 
@@ -47,20 +42,35 @@ class Crawly:
         scheduler_thread.daemon = True  # Daemonize the thread to exit when the main thread exits
         scheduler_thread.start()
 
+    def add_job(self, task):
+        job = schedule.every(task['update_interval']).minutes
+        # job.do(lambda te=row: self.run_threaded(self.execute_task(te)))
+        return job.do(self.run_threaded, task['id'])
+
     def run_scheduler(self):
         schedule.run_all()
         while True:
             schedule.run_pending()
             time.sleep(1)  # Adjust as needed to control the frequency of checking for scheduled tasks
 
-    def run_threaded(self, row):
-        job_thread = threading.Thread(target=self.execute_task, args=[row])
+    def run_threaded(self, element_id):
+        job_thread = threading.Thread(target=self.execute_task, args=[element_id])
         job_thread.start()
 
     # Function to extract text content of an element using JavaScript
 
-    def execute_task(self, tracked_element):
-        print('Grabbing', tracked_element['name'], tracked_element['url'])
+    def execute_task(self, element_id, element=None):
+        # open new DBHandler to retrieve the tracked element
+        # if anything has been changed in the gui, the updated values are extracted
+        _db_handler = DbHandler()
+        _db_handler.init_db()
+
+        if not element:
+            tracked_element = _db_handler.retrieve_tracked_element_by_id(element_id)
+            print('Grabbing', tracked_element['name'])
+        else:
+            tracked_element = element
+
         url = tracked_element['url']
         xpath = tracked_element['xpath']
         regex = tracked_element['regex']
@@ -69,7 +79,7 @@ class Crawly:
         user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.3"
 
         firefox_options = webdriver.FirefoxOptions()
-        # firefox_options.add_argument('--headless')
+        firefox_options.add_argument('--headless')
         firefox_options.add_argument(f'user-agent={user_agent}')
         firefox_options.add_argument('--disable-gpu')
         driver = webdriver.Firefox(options=firefox_options)
@@ -134,6 +144,7 @@ class Crawly:
 
         finally:
             driver.quit()  # Close the browser session
+            _db_handler.close_db()
             return extracted_price
 
 
@@ -169,6 +180,7 @@ def instert_data(tracked_elements_id, current_price):
 
     df = pd.DataFrame(data)
     db_handler.insert_price_history(df)
+
 
 if __name__ == '__main__':
     print("Starting Scheduler...")

@@ -130,7 +130,7 @@ def _init_example_data():
 
 def one_time_track(item):
     print(item)
-    return Crawly.execute_task(None, item)
+    return Crawly.execute_task(None, -1, item)
     # scheduler.run()
 
 
@@ -140,19 +140,6 @@ def main(db_handler):
     # _init_example_data()
 
     df_tracked_elements = db_handler.retrieve_tracked_elements()
-
-
-    #print(df_price_history)
-    ####################################################################################################################
-
-
-    # Create a line plot using Plotly
-    # fig_price_history = px.line(df_price_history, x='timestamp', y='current_price', color='tracked_elements_id',
-    #
-    #                             labels={'timestamp': 'Timestamp', 'current_price': 'Current Price in €',
-    #                                     'tracked_elements_id': 'Tracked Element'})
-
-    ####################################################################################################################
     # Streamlit app
 
     st.title('Price Tracker')
@@ -193,12 +180,13 @@ def main(db_handler):
                     display_line_plot(empty_df, title="No tracking data yet")
 
         edit_row = selection.iloc()[0].copy() if len(selection) == 1 else None
-        disabled = len(selection) > 1
+        is_disabled = len(selection) > 1
+
         with st.form("properties_form"):
-            name = st.text_input("Name", max_chars=255, value=get_tagged_element_value(edit_row, 'name'), disabled=disabled)
-            url = st.text_input("URL", max_chars=2048, value=get_tagged_element_value(edit_row, 'url'), disabled=disabled)
-            xpath = st.text_area("CSS Selector (recommended) / XPATH", value=get_tagged_element_value(edit_row, 'xpath'), disabled=disabled)
-            regex = st.text_area("Regex", value=get_tagged_element_value(edit_row, 'regex', REGEX_DEFAULT_PATTERN), disabled=disabled)
+            name = st.text_input("Name", max_chars=255, value=get_tagged_element_value(edit_row, 'name'), disabled=is_disabled)
+            url = st.text_input("URL", max_chars=2048, value=get_tagged_element_value(edit_row, 'url'), disabled=is_disabled)
+            xpath = st.text_area("CSS Selector (recommended) / XPATH", value=get_tagged_element_value(edit_row, 'xpath'), disabled=is_disabled)
+            regex = st.text_area("Regex", value=get_tagged_element_value(edit_row, 'regex', REGEX_DEFAULT_PATTERN), disabled=is_disabled)
 
             # Adding input fields for update interval, min price, max price, and a checkbox for active
             col211, col212, col213 = st.columns([1, 1, 1])
@@ -209,33 +197,40 @@ def main(db_handler):
                 update_interval = st.number_input("Update Interval (in minutes)",
                                                   value=get_tagged_element_value(edit_row, 'update_interval'),
                                                   min_value=1, max_value=(60 * 24 * 7),
-                                                  disabled=disabled)
+                                                  disabled=is_disabled)
             with col212:
                 min_price = st.empty()
             with col213:
                 max_price = st.empty()
 
             # TODO maybe delete/change in case we dont use notifications
-            notify = st.toggle("Notify me via email", value=get_tagged_element_value(edit_row, 'notify', default=True), disabled=disabled)
-            is_active = st.toggle("Active", value=get_tagged_element_value(edit_row, 'is_active', default=True), disabled=disabled)
+            notify = st.toggle("Notify me via email", value=get_tagged_element_value(edit_row, 'notify', default=True), disabled=is_disabled)
+            is_active = st.toggle("Active", value=get_tagged_element_value(edit_row, 'is_active', default=True), disabled=is_disabled)
 
-            btn_delete = st.form_submit_button("Delete", disabled=len(selection) != 1)
-            btn_save = st.form_submit_button("Save", disabled=disabled)
+            btn_save = st.form_submit_button("Save", disabled=is_disabled)
 
         with use_thresholds:
-            use_thresholds = st.toggle("Use Thresholds", value=get_tagged_element_value(edit_row, 'min_price_threshold') or get_tagged_element_value(edit_row, 'max_price_threshold'), disabled=disabled,
+            use_thresholds = st.toggle("Use Thresholds", value=get_tagged_element_value(edit_row, 'min_price_threshold') or get_tagged_element_value(edit_row, 'max_price_threshold'), disabled=is_disabled,
                                        help="If this is disabled, you will be notified on every price change IF 'Notify me via email' is also set")
 
         with col212:
             with min_price:
-                min_price = st.number_input("Min Price", value=get_tagged_element_value(edit_row, 'min_price_threshold'), step=1.0, min_value=0.0, disabled=not use_thresholds or disabled,
+                min_price = st.number_input("Min Price", value=get_tagged_element_value(edit_row, 'min_price_threshold'), step=1.0, min_value=0.0, disabled=not use_thresholds or is_disabled,
                                             help="Maximum threshold for the price. You will be notified when this is crossed.")
         with col213:
             with max_price:
-                max_price = st.number_input("Max Price", value=get_tagged_element_value(edit_row, 'max_price_threshold'), step=1.0, min_value=0.0, disabled=not use_thresholds or disabled,
+                max_price = st.number_input("Max Price", value=get_tagged_element_value(edit_row, 'max_price_threshold'), step=1.0, min_value=0.0, disabled=not use_thresholds or is_disabled,
                                             help="Maximum threshold for the price. You will be notified when this is crossed.")
 
+        if(btn_delete):
+            st.write(f"Delete item: {selection['name']}")
+            print(f"Delete item: {selection['name']}")
+            ids = selection['id'].tolist()
+            db_handler.delete_tracked_element_by_id(ids)
+            st.rerun()  # necessary to update the selection list
+
         if btn_save:
+            print("save pressed")
             if url is None or not re.findall(URL_PATTERN, url):
                 st.error("Please enter a valid URL")
             else:
@@ -254,11 +249,10 @@ def main(db_handler):
                 form_data['min_price_threshold'] = min_price
                 form_data['max_price_threshold'] = max_price
 
-                extracted_price = one_time_track(form_data)
-                if (extracted_price != -1):
-
+                extracted_price = one_time_track(form_data) # if this worked, the new element was already inserted by crawly
+                if extracted_price == -1:
+                    st.error("Failed extracting a price. Please change your parameters")
                     pass
-
 
                 df = pd.DataFrame([form_data])
 
@@ -268,16 +262,9 @@ def main(db_handler):
                     db_handler.update_tracked_element(id_, df)
                 else:   # form is disabled if there is more than 1 selection, so this means no selections
                     st.write(f"Insert element {df['name']}")
-                    db_handler.insert_tracked_element(df)
+                    # crawly inserted the element into the DB already
+                    # db_handler.insert_tracked_element(df)
                     st.rerun()     # necessary to update the selection list
-
-
-
-        if btn_delete:
-            st.write(f"Delete item: {selection['name']}")
-            ids = selection['id'].tolist()
-            db_handler.delete_tracked_element_by_id(ids)
-            st.rerun()     # necessary to update the selection list
 
 
     with st.container():

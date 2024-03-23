@@ -81,8 +81,10 @@ class DbHandler:
                                   (row['tracked_elements_id'], row['current_price'], row['timestamp']))
             self.conn.commit()
             # print("Data inserted successfully!")
+            return True
         except sqlite3.Error as e:
             print(f"Error inserting data: {e}")
+            return False
 
     def retrieve_tracked_elements(self):
         try:
@@ -100,6 +102,33 @@ class DbHandler:
         except sqlite3.Error as e:
             print(f"Error retrieving tracked elements: {e}")
             return pd.DataFrame()  # Return an empty DataFrame in case of an error
+
+    def retrieve_tracked_element_by_id(self, element_id):
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute('''SELECT * FROM tracked_elements WHERE id = ?''', (element_id,))
+            row = cursor.fetchone()
+            if row:
+                tracked_element = {
+                    'id': row[0],
+                    'name': row[1],
+                    'url': row[2],
+                    'xpath': row[3],
+                    'update_interval': row[4],
+                    'min_price_threshold': row[5],
+                    'max_price_threshold': row[6],
+                    'is_active': row[7],
+                    'notify': row[8],
+                    'regex': row[9]
+                }
+                # print("Tracked element retrieved successfully!")
+                return tracked_element
+            else:
+                # print("Tracked element not found in the database")
+                return {}  # Return an empty dictionary if no data found
+        except sqlite3.Error as e:
+            print(f"Error retrieving tracked element: {e}")
+            return {}  # Return an empty dictionary in case of an error
 
     def retrieve_price_history(self, element_ids):
         try:
@@ -137,11 +166,13 @@ class DbHandler:
 
             # Commit the transaction
             self.conn.commit()
+            return True
 
         except sqlite3.Error as e:
             # Roll back the transaction in case of error
             self.conn.rollback()
             print(f"Error deleting data: {e}")
+            return False
 
     def close_db(self):
         if self.conn:
