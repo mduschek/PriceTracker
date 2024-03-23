@@ -27,7 +27,7 @@ class Crawly:
 
         # create tasks
         for _, task in df_tracked_elements.iterrows():
-            job = self.add_job(task)
+            self.add_job(task)
 
         print(schedule.get_jobs())
 
@@ -38,6 +38,9 @@ class Crawly:
         scheduler_thread.start()
 
     def add_job(self, task):
+        if not task['is_active']:
+            return
+
         job = schedule.every(task['update_interval']).minutes
         job.do(self.run_threaded, task['id'])
 
@@ -51,7 +54,7 @@ class Crawly:
         job_thread = threading.Thread(target=self.execute_task, args=[element_id])
         job_thread.start()
 
-    # Function to extract text content of an element using JavaScript
+    # Function to extract text content of an element
 
     def execute_task(self, element_id, element=None):
         # open new DBHandler to retrieve the tracked element
@@ -116,6 +119,9 @@ class Crawly:
                             element_id = _db_handler.insert_tracked_element(pd.DataFrame(element, index=[0]))
                             print("New tracked element inserted into DB")
 
+                            element["id"] = element_id
+                            self.add_job(element)
+
                         # Create the DataFrame
                         df = pd.DataFrame({
                             'tracked_elements_id': [element_id],
@@ -139,8 +145,6 @@ class Crawly:
             print("Selenium WebDriver error")
         except Exception:
             print(traceback.format_exc())
-
-        # print("An error occurred")
 
         finally:
             driver.quit()  # Close the browser session
@@ -190,7 +194,6 @@ if __name__ == '__main__':
         db_handler.init_db()
 
     scheduler = Crawly(db_handler)
-    # scheduler.add_task()
     scheduler.run()
 
     while True:
