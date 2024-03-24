@@ -42,7 +42,12 @@ class Crawly:
             return
 
         job = schedule.every(task['update_interval']).minutes
-        job.do(self.run_threaded, task['id'])
+
+        # uncomment next line to run task as own thread
+        # job.do(self.run_threaded, task['id'])
+
+        # or uncomment next line to run task in series
+        job.do(self.execute_task, task['id'])
 
     def run_scheduler(self):
         schedule.run_all()
@@ -79,7 +84,7 @@ class Crawly:
         user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.3"
 
         firefox_options = webdriver.FirefoxOptions()
-        firefox_options.add_argument('--headless')
+        # firefox_options.add_argument('--headless')
         firefox_options.add_argument(f'user-agent={user_agent}')
         firefox_options.add_argument('--disable-gpu')
         driver = webdriver.Firefox(options=firefox_options)
@@ -120,7 +125,7 @@ class Crawly:
                             print("New tracked element inserted into DB")
 
                             element["id"] = element_id
-                            self.add_job(element)
+                            # self.add_job(element) # TODO: make this work
 
                         # Create the DataFrame
                         df = pd.DataFrame({

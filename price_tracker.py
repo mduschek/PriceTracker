@@ -37,7 +37,7 @@ def get_tagged_element_value(row, col, default=None):
 
 
 def display_line_plot(df, title="", height=500):
-    print(df)
+    # print(df)
 
     fig_price_history = px.line(df, x='timestamp', y='current_price', color='name',
                                 labels={'timestamp': 'Timestamp', 'current_price': 'Current Price in €',
