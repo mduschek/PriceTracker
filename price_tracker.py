@@ -3,6 +3,7 @@ import re
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+from streamlit_extras.stylable_container import stylable_container
 
 from crawly import Crawly
 from db_handler import DbHandler
@@ -10,6 +11,10 @@ from db_handler import DbHandler
 # https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url
 URL_PATTERN = r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)"
 REGEX_DEFAULT_PATTERN = r"[-+]?\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)"
+
+
+def reset_checkboxes():
+    st.session_state['chk_widget_idx'] += 1
 
 
 def dataframe_with_selections(df):
@@ -25,6 +30,7 @@ def dataframe_with_selections(df):
                        "max_price_threshold": None, "is_active": None, "notify": None, "regex": None},
         disabled=df.columns,
         use_container_width=True,
+        key=f'selected_items{st.session_state["chk_widget_idx"]}'
     )
 
     # Filter the dataframe using the temporary column, then drop the column
@@ -163,15 +169,11 @@ def gui(db_handler):
         # table to select and display items
         with col12:
             selection = dataframe_with_selections(df_tracked_elements)
-            btn_delete = st.button("Delete", disabled=len(selection) != 1)  # onclick did not work unfortunately
-
-            # if btn_add:
-            # TODO: selection does not yet unselect all items properly in the GUI
-            # dataframe_with_selections(df_tracked_elements)
-            # selection = selection.iloc[0:0]
-            # select_df["Select"] = False
-            # st.write(select_df)
-            # st.write(selection)
+            col121, col122 = st.columns([1, 1])
+            with col121:
+                btn_delete = st.button("Delete", disabled=len(selection) != 1, use_container_width=True)  # onclick did not work unfortunately
+            with col122:
+                btn_add = st.button("Add", on_click=reset_checkboxes, use_container_width=True)
 
         # graph to show price history
         with col11:
@@ -318,6 +320,9 @@ def start_crawly(_db_handler):
 
 if __name__ == '__main__':
     st.set_page_config(layout="wide")
+
+    if 'chk_widget_idx' not in st.session_state:
+        st.session_state['chk_widget_idx'] = 0
 
     db_handler = DbHandler()
     if db_handler.conn is None:
