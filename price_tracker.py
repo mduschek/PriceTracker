@@ -3,7 +3,6 @@ import re
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from streamlit_extras.stylable_container import stylable_container
 
 from crawly import Crawly
 from db_handler import DbHandler
