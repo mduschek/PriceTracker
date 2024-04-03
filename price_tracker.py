@@ -164,7 +164,7 @@ def gui(db_handler):
     # create a 3-column layout
     col11, col12 = st.columns([3, 1])
 
-    with st.container():
+    with (st.container()):
         # table to select and display items
         with col12:
             selection = dataframe_with_selections(df_tracked_elements)
@@ -200,17 +200,26 @@ def gui(db_handler):
 
         # form to add/update items
         with st.form("properties_form"):
-            name = st.text_input("Name", max_chars=255, value=get_tagged_element_value(edit_row, 'name'),
-                                 disabled=is_disabled)
-            url = st.text_input("URL", max_chars=2048, value=get_tagged_element_value(edit_row, 'url'),
-                                disabled=is_disabled)
+            # Example for the name field
+
+            name_value = "" if st.session_state['reset_form'] else get_tagged_element_value(edit_row, 'name')
+            name = st.text_input("Name", max_chars=255, value=name_value, disabled=is_disabled, key='form_name')
+
+            url_value = "" if st.session_state['reset_form'] else get_tagged_element_value(edit_row, 'url')
+            url = st.text_input("URL", max_chars=2048, value=url_value, disabled=is_disabled, key='form_url')
+
+            xpath_value = "" if st.session_state['reset_form'] else get_tagged_element_value(edit_row, 'xpath')
             xpath = st.text_area("CSS Selector (recommended) / XPATH",
-                                 value=get_tagged_element_value(edit_row, 'xpath'), disabled=is_disabled,
+                                 value=xpath_value, disabled=is_disabled,
                                  help="To retrieve the CSS selector, go to the item's page, right-click on the price element -> Inspect. Right-click on the html element "
-                                      "that selects the price -> Copy -> CSS Selector.")
+                                      "that selects the price -> Copy -> CSS Selector.", key='form_xpath')
+
+            regex_value = "" if st.session_state['reset_form'] else get_tagged_element_value(edit_row, 'regex')
             regex = st.text_area("Regex (leave empty for default value)",
-                                 value=get_tagged_element_value(edit_row, 'regex'), disabled=is_disabled,
-                                 placeholder=REGEX_DEFAULT_PATTERN, help="The regular expression helps to select the price element and convert it to a number.")
+                                 value=regex_value, disabled=is_disabled,
+                                 placeholder=REGEX_DEFAULT_PATTERN,
+                                 help="The regular expression helps to select the price element and convert it to a number.",
+                                 key='form_regex')
 
             # Adding input fields for update interval, min price, max price, and a checkbox for active
             col211, col212, col213 = st.columns([1, 1, 1])
@@ -218,39 +227,50 @@ def gui(db_handler):
             use_thresholds = st.empty()  # placeholder
 
             with col211:
+                update_interval_value = None if st.session_state['reset_form'] else get_tagged_element_value(edit_row, 'update_interval')
                 update_interval = st.number_input("Update Interval (in minutes)",
-                                                  value=get_tagged_element_value(edit_row, 'update_interval'),
+                                                  value=update_interval_value,
                                                   min_value=1, max_value=(60 * 24 * 7),
-                                                  disabled=is_disabled)
+                                                  disabled=is_disabled,
+                                                  key='form_update_interval')
+                print('Session State Reset Form', st.session_state['reset_form'])
+                print('Update Interval value:', update_interval)
+                print('Update Interval VALUE:', update_interval_value)
+
             with col212:
                 min_price = st.empty()
             with col213:
                 max_price = st.empty()
 
             # TODO maybe delete/change in case we dont use notifications
-            notify = st.toggle("Notify me via email", value=get_tagged_element_value(edit_row, 'notify', default=True),
+            notify_value = True if st.session_state['reset_form'] else get_tagged_element_value(edit_row, 'notify', default=True)
+            notify = st.toggle("Notify me via email", value=notify_value,
                                disabled=is_disabled)
-            is_active = st.toggle("Active", value=get_tagged_element_value(edit_row, 'is_active', default=True),
+
+            is_active_value = True if st.session_state['reset_form'] else get_tagged_element_value(edit_row, 'is_active', default=True)
+            is_active = st.toggle("Active", value=is_active_value,
                                   disabled=is_disabled)
 
             btn_save = st.form_submit_button("Save", disabled=is_disabled)
 
         with use_thresholds:
-            use_thresholds = st.toggle("Use Thresholds", value=get_tagged_element_value(edit_row,
-                                                                                        'min_price_threshold') or get_tagged_element_value(
-                edit_row, 'max_price_threshold'), disabled=is_disabled,
+            use_thresholds_value = False if st.session_state['reset_form'] else get_tagged_element_value(edit_row, 'min_price_threshold') \
+                                                                               or get_tagged_element_value(edit_row, 'max_price_threshold')
+            use_thresholds = st.toggle("Use Thresholds", value=use_thresholds_value, disabled=is_disabled,
                                        help="If this is disabled, you will be notified on every price change IF 'Notify me via email' is also set")
 
         with col212:
             with min_price:
+                min_price_value = None if st.session_state['reset_form'] else get_tagged_element_value(edit_row, 'min_price_threshold')
                 min_price = st.number_input("Min Price",
-                                            value=get_tagged_element_value(edit_row, 'min_price_threshold'), step=1.0,
+                                            value=min_price_value, step=1.0,
                                             min_value=0.0, disabled=not use_thresholds or is_disabled,
                                             help="Maximum threshold for the price. You will be notified when this is crossed.")
         with col213:
             with max_price:
+                max_price_value = None if st.session_state['reset_form'] else get_tagged_element_value(edit_row, 'max_price_threshold')
                 max_price = st.number_input("Max Price",
-                                            value=get_tagged_element_value(edit_row, 'max_price_threshold'), step=1.0,
+                                            value=max_price_value, step=1.0,
                                             min_value=0.0, disabled=not use_thresholds or is_disabled,
                                             help="Maximum threshold for the price. You will be notified when this is crossed.")
 
@@ -301,6 +321,7 @@ def gui(db_handler):
                             else:  # form is disabled if there is more than 1 selection, so this means no selections -> insert new item
                                 # item has already been inserted by crawly at this point
                                 st.write(f"Inserted element {df['name']}")
+                                st.session_state['reset_form'] = True
                                 st.rerun()  # necessary to update the selection list
             # TODO after adding a new item, the textboxes in the form should be reset!
 
@@ -323,9 +344,15 @@ if __name__ == '__main__':
     if 'chk_widget_idx' not in st.session_state:
         st.session_state['chk_widget_idx'] = 0
 
+    if 'reset_form' not in st.session_state:
+        st.session_state['reset_form'] = False
+
     db_handler = DbHandler()
     if db_handler.conn is None:
         db_handler.init_db()
 
     start_crawly(db_handler)
     gui(db_handler)
+
+    if st.session_state['reset_form']:
+        st.session_state['reset_form'] = False
