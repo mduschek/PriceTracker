@@ -10,6 +10,7 @@ from db_handler import DbHandler
 # https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url
 URL_PATTERN = r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)"
 REGEX_DEFAULT_PATTERN = r"[-+]?\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)"
+DEFAULT_UPDATE_INTERVAL = 60
 
 
 def reset_checkboxes():
@@ -227,7 +228,7 @@ def gui(db_handler):
             use_thresholds = st.empty()  # placeholder
 
             with col211:
-                update_interval_value = None if st.session_state['reset_form'] else get_tagged_element_value(edit_row, 'update_interval')
+                update_interval_value = DEFAULT_UPDATE_INTERVAL if st.session_state['reset_form'] else get_tagged_element_value(edit_row, 'update_interval', DEFAULT_UPDATE_INTERVAL)
                 update_interval = st.number_input("Update Interval (in minutes)",
                                                   value=update_interval_value,
                                                   min_value=1, max_value=(60 * 24 * 7),
