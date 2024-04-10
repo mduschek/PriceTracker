@@ -18,12 +18,9 @@ class DbHandler:
                             name VARCHAR(255) NOT NULL,
                             url VARCHAR(2048) NOT NULL,
                             xpath TEXT NOT NULL,
-                            regex TEXT NOT NULL,
                             update_interval INTEGER NOT NULL,
-                            min_price_threshold DOUBLE,
-                            max_price_threshold DOUBLE,
                             is_active BOOLEAN NOT NULL DEFAULT TRUE,
-                            notify BOOLEAN NOT NULL DEFAULT TRUE
+                            regex TEXT NOT NULL
                         )''')
 
         cursor.execute('''CREATE TABLE IF NOT EXISTS price_history (
@@ -41,12 +38,10 @@ class DbHandler:
         try:
             for index, row in df.iterrows():
                 cursor.execute('''INSERT INTO tracked_elements 
-                                  (name, url, xpath, update_interval, min_price_threshold, 
-                                  max_price_threshold, is_active, notify, regex) 
-                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                                  (name, url, xpath, update_interval, is_active, regex) 
+                                  VALUES (?, ?, ?, ?, ?, ?)''',
                                (row['name'], row['url'], row['xpath'], row['update_interval'],
-                                row['min_price_threshold'], row['max_price_threshold'], row['is_active'],
-                                row['notify'], row['regex']))
+                                row['is_active'], row['regex']))
             self.conn.commit()
             print(cursor.lastrowid)
             return cursor.lastrowid  # return new id
@@ -59,12 +54,10 @@ class DbHandler:
             for index, row in df.iterrows():
                 cursor.execute('''UPDATE tracked_elements 
                                   SET name=?, url=?, xpath=?, update_interval=?, 
-                                      min_price_threshold=?, max_price_threshold=?, 
-                                      is_active=?, notify=?, regex=? 
+                                     is_active=?, regex=? 
                                   WHERE id=?''',
                                (row['name'], row['url'], row['xpath'], row['update_interval'],
-                                row['min_price_threshold'], row['max_price_threshold'], row['is_active'],
-                                row['notify'], row.get('regex', ''), int(id_)))
+                                row['is_active'], row.get('regex', ''), int(id_)))
                 print(f"Done updating row {index + 1}/{len(df)}. Rows affected: {cursor.rowcount}")
             self.conn.commit()
             print("Data updated successfully!")
@@ -92,9 +85,8 @@ class DbHandler:
             cursor.execute('''SELECT * FROM tracked_elements''')
             rows = cursor.fetchall()
             if rows:
-                df = pd.DataFrame(rows, columns=['id', 'name', 'url', 'xpath', 'update_interval',
-                                                 'min_price_threshold', 'max_price_threshold', 'is_active', 'notify',
-                                                 'regex'])
+                df = pd.DataFrame(rows, columns=['id', 'name', 'url', 'xpath', 'regex', 'update_interval',
+                                                 'is_active'])
                 return df
             else:
                 return pd.DataFrame()  # return empty DataFrame if no data found
@@ -113,12 +105,9 @@ class DbHandler:
                     'name': row[1],
                     'url': row[2],
                     'xpath': row[3],
-                    'update_interval': row[4],
-                    'min_price_threshold': row[5],
-                    'max_price_threshold': row[6],
-                    'is_active': row[7],
-                    'notify': row[8],
-                    'regex': row[9]
+                    'update_interval': row[5],
+                    'is_active': row[6],
+                    'regex': row[4]
                 }
                 return tracked_element
             else:

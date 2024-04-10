@@ -26,8 +26,7 @@ def dataframe_with_selections(df):
         df_with_selections,
         hide_index=True,
         column_config={"Select": st.column_config.CheckboxColumn(required=True), "name": "Name", "id": None,
-                       "url": None, "xpath": None, "update_interval": None, "min_price_threshold": None,
-                       "max_price_threshold": None, "is_active": None, "notify": None, "regex": None},
+                       "url": None, "xpath": None, "update_interval": None, "is_active": None, "regex": None},
         disabled=df.columns,
         use_container_width=True,
         key=f'selected_items{st.session_state["chk_widget_idx"]}'
@@ -43,8 +42,6 @@ def get_tagged_element_value(row, col, default=None):
 
 
 def display_line_plot(df, title="", height=500):
-    # print(df)
-
     fig_price_history = px.line(df, x='timestamp', y='current_price', color='name',
                                 labels={'timestamp': 'Timestamp', 'current_price': 'Current Price in €',
                                         'name': 'Tracked Element'},
@@ -67,10 +64,7 @@ def _init_example_data():
         'url': ["https://example.com/product"],
         'xpath': ["//div[@class='product']"],
         'update_interval': [60],
-        'min_price_threshold': [50.0],
-        'max_price_threshold': [100.0],
         'is_active': [True],
-        'notify': [True],
         'regex': REGEX_DEFAULT_PATTERN
     }
     tracked_elem_2 = {
@@ -80,10 +74,7 @@ def _init_example_data():
         'xpath': [
             "/html/body/div[2]/div/div[6]/div[3]/div[4]/div[13]/div/div/div[1]/div/div[3]/div[1]/span[2]/span[2]/span[2]"],
         'update_interval': [100],
-        'min_price_threshold': [69.0],
-        'max_price_threshold': None,
         'is_active': [False],
-        'notify': [False],
         'regex': REGEX_DEFAULT_PATTERN
     }
     df1 = pd.DataFrame(tracked_elem_1)
@@ -225,8 +216,6 @@ def gui(db_handler):
             # Adding input fields for update interval, min price, max price, and a checkbox for active
             col211, col212, col213 = st.columns([1, 1, 1])
 
-            use_thresholds = st.empty()  # placeholder
-
             with col211:
                 update_interval_value = DEFAULT_UPDATE_INTERVAL if st.session_state['reset_form'] else get_tagged_element_value(edit_row, 'update_interval', DEFAULT_UPDATE_INTERVAL)
                 update_interval = st.number_input("Update Interval (in minutes)",
@@ -234,19 +223,9 @@ def gui(db_handler):
                                                   min_value=1, max_value=(60 * 24 * 7),
                                                   disabled=is_disabled,
                                                   key='form_update_interval')
-                print('Session State Reset Form', st.session_state['reset_form'])
-                print('Update Interval value:', update_interval)
-                print('Update Interval VALUE:', update_interval_value)
-
-            with col212:
-                min_price = st.empty()
-            with col213:
-                max_price = st.empty()
-
-            # TODO maybe delete/change in case we dont use notifications
-            notify_value = True if st.session_state['reset_form'] else get_tagged_element_value(edit_row, 'notify', default=True)
-            notify = st.toggle("Notify me via email", value=notify_value,
-                               disabled=is_disabled)
+                #print('Session State Reset Form', st.session_state['reset_form'])
+                #print('Update Interval value:', update_interval)
+                #print('Update Interval VALUE:', update_interval_value)
 
             is_active_value = True if st.session_state['reset_form'] else get_tagged_element_value(edit_row, 'is_active', default=True)
             is_active = st.toggle("Active", value=is_active_value,
@@ -254,26 +233,6 @@ def gui(db_handler):
 
             btn_save = st.form_submit_button("Save", disabled=is_disabled)
 
-        with use_thresholds:
-            use_thresholds_value = False if st.session_state['reset_form'] else get_tagged_element_value(edit_row, 'min_price_threshold') \
-                                                                               or get_tagged_element_value(edit_row, 'max_price_threshold')
-            use_thresholds = st.toggle("Use Thresholds", value=use_thresholds_value, disabled=is_disabled,
-                                       help="If this is disabled, you will be notified on every price change IF 'Notify me via email' is also set")
-
-        with col212:
-            with min_price:
-                min_price_value = None if st.session_state['reset_form'] else get_tagged_element_value(edit_row, 'min_price_threshold')
-                min_price = st.number_input("Min Price",
-                                            value=min_price_value, step=1.0,
-                                            min_value=0.0, disabled=not use_thresholds or is_disabled,
-                                            help="Maximum threshold for the price. You will be notified when this is crossed.")
-        with col213:
-            with max_price:
-                max_price_value = None if st.session_state['reset_form'] else get_tagged_element_value(edit_row, 'max_price_threshold')
-                max_price = st.number_input("Max Price",
-                                            value=max_price_value, step=1.0,
-                                            min_value=0.0, disabled=not use_thresholds or is_disabled,
-                                            help="Maximum threshold for the price. You will be notified when this is crossed.")
 
         if btn_delete:
             with st.spinner('Loading...'):
@@ -297,34 +256,27 @@ def gui(db_handler):
                         'xpath': xpath,
                         'regex': regex.strip() if regex and regex.strip() else REGEX_DEFAULT_PATTERN,  # use placeholder value if nothing else was specified
                         'update_interval': update_interval,
-                        'min_price_threshold': None,
-                        'max_price_threshold': None,
-                        'notify': notify,
                         'is_active': is_active
                     }
-                    if min_price != st.empty():
-                        form_data['min_price_threshold'] = min_price
-                        form_data['max_price_threshold'] = max_price
 
-                        # if this works, the item is already inserted in the db here
-                        # if not, it returns -1
-                        extracted_price = one_time_track(form_data)
+                    # if this works, the item is already inserted in the db here
+                    # if not, it returns -1
+                    extracted_price = one_time_track(form_data)
 
-                        if extracted_price == -1:
-                            st.error("Failed extracting a price. Please change your parameters")
-                        else:
-                            df = pd.DataFrame([form_data])
+                    if extracted_price == -1:
+                        st.error("Failed extracting a price. Please change your parameters")
+                    else:
+                        df = pd.DataFrame([form_data])
 
-                            if len(selection) == 1:     # update selected item
-                                id_ = int(selection['id'].values[0])
-                                db_handler.update_tracked_element(id_, df)
-                                st.write(f'Updated element {name}')
-                            else:  # form is disabled if there is more than 1 selection, so this means no selections -> insert new item
-                                # item has already been inserted by crawly at this point
-                                st.write(f"Inserted element {df['name']}")
-                                st.session_state['reset_form'] = True
-                                st.rerun()  # necessary to update the selection list
-            # TODO after adding a new item, the textboxes in the form should be reset!
+                        if len(selection) == 1:     # update selected item
+                            id_ = int(selection['id'].values[0])
+                            db_handler.update_tracked_element(id_, df)
+                            st.write(f'Updated element {name}')
+                        else:  # form is disabled if there is more than 1 selection, so this means no selections -> insert new item
+                            # item has already been inserted by crawly at this point
+                            st.write(f"Inserted element {df['name']}")
+                            st.session_state['reset_form'] = True
+                        st.rerun()  # necessary to update the selection list
 
     with st.container():
         st.write('Authors: Michael Duschek, Carina Hauber, Lukas Seifriedsberger, 2024')

@@ -41,7 +41,8 @@ class Crawly:
         if not task['is_active']:
             return
 
-        job = schedule.every(task['update_interval']).minutes
+        update_interval = int(task['update_interval'])
+        job = schedule.every(update_interval).minutes
 
         # uncomment next line to run task as own thread
         # job.do(self.run_threaded, task['id'])
