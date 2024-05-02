@@ -134,7 +134,9 @@ def one_time_track(item):
     return Crawly.execute_task(None, -1, item)
 
 
-def isNotUnique(name, df_tracked_elements, selection):
+def is_not_unique(name, df_tracked_elements, selection):
+    if df_tracked_elements.empty:
+        return False  # If DataFrame is empty, name is considered unique
     if not selection.empty:
         # remove selection to check whether the name is unique aside from the selection when editing an item
         filtered_df = df_tracked_elements[~df_tracked_elements['name'].isin(selection['name'])]
@@ -168,7 +170,11 @@ def gui(db_handler):
 
         # graph to show price history
         with col11:
-            df_price_history = db_handler.retrieve_price_history(selection['id'].tolist())
+            if 'id' not in selection.columns or selection['id'].isnull().any():
+                df_price_history = []
+            else:
+                df_price_history = db_handler.retrieve_price_history(selection['id'].tolist())
+
             if not selection.empty and not df_price_history.empty:
                 # merge price history with corresponding item
                 merged_df = pd.merge(df_price_history, selection[['id', 'name']], left_on='tracked_elements_id',
@@ -246,7 +252,7 @@ def gui(db_handler):
             with st.spinner('Loading...'):
                 if url is None or not re.findall(URL_PATTERN, url):
                     st.error("Please enter a valid URL")
-                elif isNotUnique(name, df_tracked_elements, selection):  # name needs to be unique for displaying the items in the graph properly
+                elif is_not_unique(name, df_tracked_elements, selection):  # name needs to be unique for displaying the items in the graph properly
                     st.error("Please enter a unique name")
                 else:
                     form_data = {

@@ -85,8 +85,8 @@ class DbHandler:
             cursor.execute('''SELECT * FROM tracked_elements''')
             rows = cursor.fetchall()
             if rows:
-                df = pd.DataFrame(rows, columns=['id', 'name', 'url', 'xpath', 'regex', 'update_interval',
-                                                 'is_active'])
+                df = pd.DataFrame(rows, columns=['id', 'name', 'url', 'xpath', 'update_interval',
+                                                 'is_active', 'regex'])
                 return df
             else:
                 return pd.DataFrame()  # return empty DataFrame if no data found
@@ -105,9 +105,9 @@ class DbHandler:
                     'name': row[1],
                     'url': row[2],
                     'xpath': row[3],
-                    'update_interval': row[5],
-                    'is_active': row[6],
-                    'regex': row[4]
+                    'update_interval': row[4],
+                    'is_active': row[5],
+                    'regex': row[6]
                 }
                 return tracked_element
             else:
