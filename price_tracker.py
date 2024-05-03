@@ -127,9 +127,6 @@ def _init_example_data():
         db_handler.insert_price_history(df)
 
 
-# def reset_checkboxes():
-# call this when add button is clicked
-
 def one_time_track(item):
     return Crawly.execute_task(None, -1, item)
 
@@ -164,7 +161,7 @@ def gui(db_handler):
             selection = dataframe_with_selections(df_tracked_elements)
             col121, col122 = st.columns([1, 1])
             with col121:
-                btn_delete = st.button("Delete", disabled=len(selection) != 1, use_container_width=True)  # onclick did not work unfortunately
+                btn_delete = st.button("Delete", disabled=len(selection) != 1, use_container_width=True)
             with col122:
                 btn_add = st.button("Add", on_click=reset_checkboxes, use_container_width=True)
 
@@ -229,9 +226,6 @@ def gui(db_handler):
                                                   min_value=1, max_value=(60 * 24 * 7),
                                                   disabled=is_disabled,
                                                   key='form_update_interval')
-                #print('Session State Reset Form', st.session_state['reset_form'])
-                #print('Update Interval value:', update_interval)
-                #print('Update Interval VALUE:', update_interval_value)
 
             is_active_value = True if st.session_state['reset_form'] else get_tagged_element_value(edit_row, 'is_active', default=True)
             is_active = st.toggle("Active", value=is_active_value,

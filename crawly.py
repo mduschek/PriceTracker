@@ -134,7 +134,6 @@ class Crawly:
                             'current_price': [extracted_price],
                             'timestamp': [current_timestamp]
                         })
-                        # print(df)
 
                         if _db_handler.insert_price_history(df):
                             print("Price inserted into DB")
