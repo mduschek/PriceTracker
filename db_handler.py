@@ -43,7 +43,6 @@ class DbHandler:
                                (row['name'], row['url'], row['xpath'], row['update_interval'],
                                 row['is_active'], row['regex']))
             self.conn.commit()
-            print(cursor.lastrowid)
             return cursor.lastrowid  # return new id
         except sqlite3.Error as e:
             print(f"Error inserting data: {e}")
@@ -73,7 +72,6 @@ class DbHandler:
                                   VALUES (?, ?, ?)''',
                                (row['tracked_elements_id'], row['current_price'], row['timestamp']))
             self.conn.commit()
-            # print("Data inserted successfully!")
             return True
         except sqlite3.Error as e:
             print(f"Error inserting data: {e}")

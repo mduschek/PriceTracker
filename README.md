@@ -30,12 +30,12 @@ A Streamlit dashboard serves as the user interface:
 1. **Price Tracking Visualization:**
    - The dashboard features a line chart displaying the price history. Users can select one or multiple items to track and visualize their price trends over time.
    - Example visualization:
-     ![Price History Chart](img.png)
+     ![Price History Chart](resources/price-history-chart.png)
 
 2. **Management Form:**
    - Users can add new items, modify existing ones, or delete them through a form. This form requires details such as the item name, the URL of the online shop, and either an X-PATH or CSS selector for the price field. Users can also set how frequently the price should be updated.
    - Example visualization:
-      ![img_1.png](img_1.png)
+      ![Management Form](resources/management-form.png)
 
 ### Technical Aspects
 
