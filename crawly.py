@@ -13,152 +13,142 @@ from selenium.webdriver.common.by import By
 from db_handler import DbHandler
 
 
-class Crawly:
-    db_handler = None
-    scheduled_tasks = None
+scheduled_tasks = {}
 
-    def __init__(self, _db_handler: DbHandler):
-        self.db_handler = _db_handler
-        if self.db_handler.conn is None:
-            self.db_handler.init_db()
 
-    def run(self):
-        df_tracked_elements = self.db_handler.retrieve_tracked_elements()
+def add_job(task):
+    if not task['is_active']:
+        return
 
-        # create tasks
-        for _, task in df_tracked_elements.iterrows():
-            self.add_job(task)
+    update_interval = int(task['update_interval'])
+    job = schedule.every(update_interval).minutes
 
-        print(schedule.get_jobs())
+    # uncomment next line to run task as own thread
+    # job.do(self.run_threaded, task['id'])
 
-        # Run the scheduler
-        ### THREADED APPROACH ###
-        scheduler_thread = threading.Thread(target=self.run_scheduler)
-        scheduler_thread.daemon = True  # Daemonize the thread to exit when the main thread exits
-        scheduler_thread.start()
+    # or uncomment next line to run task in series
+    job.do(execute_task, task['id'])
 
-    def add_job(self, task):
-        if not task['is_active']:
-            return
+    scheduled_tasks[task['id']] = job
+    print(scheduled_tasks)
 
-        update_interval = int(task['update_interval'])
-        job = schedule.every(update_interval).minutes
+def change_update_interval(task):
+    job = scheduled_tasks[task['id']]
+    schedule.cancel_job(job)
+    add_job(task)
 
-        # uncomment next line to run task as own thread
-        # job.do(self.run_threaded, task['id'])
 
-        # or uncomment next line to run task in series
-        job.do(self.execute_task, task['id'])
+def run_scheduler():
+    schedule.run_all()
+    while True:
+        schedule.run_pending()
+        time.sleep(1)  # Adjust as needed to control the frequency of checking for scheduled tasks
 
-    def run_scheduler(self):
-        schedule.run_all()
-        while True:
-            schedule.run_pending()
-            time.sleep(1)  # Adjust as needed to control the frequency of checking for scheduled tasks
 
-    def run_threaded(self, element_id):
-        job_thread = threading.Thread(target=self.execute_task, args=[element_id])
-        job_thread.start()
+def __run_threaded(element_id):
+    job_thread = threading.Thread(target=execute_task, args=[element_id])
+    job_thread.start()
 
-    # Function to extract text content of an element
 
-    def execute_task(self, element_id, element=None):
-        # open new DBHandler to retrieve the tracked element
-        # if anything has been changed in the gui, the updated values are extracted
-        _db_handler = DbHandler()
-        _db_handler.init_db()
+def execute_task(element_id, element=None):
+    # open new DBHandler to retrieve the tracked element
+    # if anything has been changed in the gui, the updated values are extracted
+    _db_handler = DbHandler()
+    _db_handler.init_db()
 
-        # element is supplied if the function is executed while the element is not yet saved to the db
-        # otherwise load tracked_element from the database
-        if not element:
-            tracked_element = _db_handler.retrieve_tracked_element_by_id(element_id)
-            print('Grabbing', tracked_element['name'])
-        else:
-            tracked_element = element
-            element_id = tracked_element["id"]
+    # element is supplied if the function is executed while the element is not yet saved to the db
+    # otherwise load tracked_element from the database
+    if not element:
+        tracked_element = _db_handler.retrieve_tracked_element_by_id(element_id)
+        print('Grabbing', tracked_element['name'])
+    else:
+        tracked_element = element
+        element_id = tracked_element["id"]
 
-        url = tracked_element['url']
-        xpath = tracked_element['xpath']
-        regex = tracked_element['regex']
+    url = tracked_element['url']
+    xpath = tracked_element['xpath']
+    regex = tracked_element['regex']
 
-        # Pretend being a Human browsing the web
-        user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.3"
+    # Pretend being a Human browsing the web
+    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.3"
 
-        firefox_options = webdriver.FirefoxOptions()
-        firefox_options.add_argument('--headless')
-        firefox_options.add_argument(f'user-agent={user_agent}')
-        firefox_options.add_argument('--disable-gpu')
-        driver = webdriver.Firefox(options=firefox_options)
+    firefox_options = webdriver.FirefoxOptions()
+    firefox_options.add_argument('--headless')
+    firefox_options.add_argument(f'user-agent={user_agent}')
+    firefox_options.add_argument('--disable-gpu')
+    driver = webdriver.Firefox(options=firefox_options)
 
-        extracted_price = -1
+    extracted_price = -1
 
+    try:
+        driver.get(url)
+
+        html_element = None
+        # Wait for the element to be present on the page
         try:
-            driver.get(url)
-
-            html_element = None
-            # Wait for the element to be present on the page
+            html_element = driver.find_element(By.XPATH, xpath)
+        except:
             try:
-                html_element = driver.find_element(By.XPATH, xpath)
+                html_element = driver.find_element(By.CSS_SELECTOR, xpath)
             except:
+                print("no price found")
+
+        # Extract the element text
+        if html_element:
+            text_content = html_element.get_attribute("textContent")
+            price_str = __extract_price(text_content, regex)
+            if price_str:
                 try:
-                    html_element = driver.find_element(By.CSS_SELECTOR, xpath)
-                except:
-                    print("no price found")
+                    extracted_price = float(price_str)
+                    print(f"Extracted Price: {extracted_price}")
 
-            # Extract the element text
-            if html_element:
-                text_content = html_element.get_attribute("textContent")
-                price_str = extract_price(text_content, regex)
-                if price_str:
-                    try:
-                        extracted_price = float(price_str)
-                        print(f"Extracted Price: {extracted_price}")
+                    # Get the current system timestamp
+                    current_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-                        # Get the current system timestamp
-                        current_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    # on the press of the save button the element is not yet in the database.
+                    # therefore it will be created at this point as a valid price was found.
+                    # otherwise, the price is inserted for the existing element ID
+                    if element_id == -1:
+                        element["id"] = None
+                        element_id = _db_handler.insert_tracked_element(pd.DataFrame(element, index=[0]))
+                        print("New tracked element inserted into DB")
 
-                        # on the press of the save button the element is not yet in the database.
-                        # therefore it will be created at this point as a valid price was found.
-                        # otherwise, the price is inserted for the existing element ID
-                        if element_id == -1:
-                            element["id"] = None
-                            element_id = _db_handler.insert_tracked_element(pd.DataFrame(element, index=[0]))
-                            print("New tracked element inserted into DB")
+                        element = _db_handler.retrieve_tracked_element_by_id(element_id)
+                        add_job(element)
+                        print(schedule.get_jobs())
 
-                            element["id"] = element_id
-                            # self.add_job(element) # TODO: make this work
+                    # Create the DataFrame
+                    df = pd.DataFrame({
+                        'tracked_elements_id': [element_id],
+                        'current_price': [extracted_price],
+                        'timestamp': [current_timestamp]
+                    })
+                    # print(df)
 
-                        # Create the DataFrame
-                        df = pd.DataFrame({
-                            'tracked_elements_id': [element_id],
-                            'current_price': [extracted_price],
-                            'timestamp': [current_timestamp]
-                        })
-                        # print(df)
+                    if _db_handler.insert_price_history(df):
+                        print("Price inserted into DB")
 
-                        if _db_handler.insert_price_history(df):
-                            print("Price inserted into DB")
-
-                    except ValueError:
-                        print(f"Could not convert extracted price to float: {price_str}")
-                        print(traceback.format_exc())
-                else:
-                    print("Could not extract price")
+                except ValueError:
+                    print(f"Could not convert extracted price to float: {price_str}")
+                    print(traceback.format_exc())
             else:
-                print("Element not found")
+                print("Could not extract price")
+        else:
+            print("Element not found")
 
-        except WebDriverException:
-            print("Selenium WebDriver error")
-        except Exception:
-            print(traceback.format_exc())
+    except WebDriverException:
+        print("Selenium WebDriver error")
+    except Exception:
+        print(traceback.format_exc())
 
-        finally:
-            driver.quit()  # Close the browser session
-            _db_handler.close_db()
-            return extracted_price
+    finally:
+        driver.quit()  # Close the browser session
+        _db_handler.close_db()
+        return extracted_price
 
 
-def extract_price(text, pattern):
+# Function to extract text content of an element
+def __extract_price(text, pattern):
     match = re.search(pattern, text)
     if match:
         number_str = match.group()
@@ -181,15 +171,28 @@ def extract_price(text, pattern):
     return None
 
 
-def instert_data(tracked_elements_id, current_price):
-    data = {
-        "tracked_elements_id": [tracked_elements_id],
-        "current_price": [current_price],
-        "timestamp": [datetime.datetime.now()]
-    }
+class Crawly:
+    db_handler = None
 
-    df = pd.DataFrame(data)
-    db_handler.insert_price_history(df)
+    def __init__(self, _db_handler: DbHandler):
+        self.db_handler = _db_handler
+        if self.db_handler.conn is None:
+            self.db_handler.init_db()
+
+    def run(self):
+        df_tracked_elements = self.db_handler.retrieve_tracked_elements()
+
+        # create tasks
+        for _, task in df_tracked_elements.iterrows():
+            add_job(task)
+
+        print(schedule.get_jobs())
+
+        # Run the scheduler
+        ### THREADED APPROACH ###
+        scheduler_thread = threading.Thread(target=run_scheduler)
+        scheduler_thread.daemon = True  # Daemonize the thread to exit when the main thread exits
+        scheduler_thread.start()
 
 
 if __name__ == '__main__':

@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from crawly import Crawly
+from crawly import Crawly, execute_task, change_update_interval
 from db_handler import DbHandler
 
 # https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url
@@ -42,10 +42,33 @@ def get_tagged_element_value(row, col, default=None):
 
 
 def display_line_plot(df, title="", height=500):
+
+    # only display price of point if it has changed
+    df = df.sort_values(by='timestamp')
+    text_values = []
+    for name in df['name'].unique():
+        subset_df = df[df['name'] == name]  # Get the subset of the DataFrame for the current name
+        last_price = None
+        trace_text = []
+        # Loop through each row in the subset DataFrame
+        for index, row in subset_df.iterrows():
+            # Check if the current price is different from the last observed price
+            if row['current_price'] != last_price:
+                trace_text.append(row['current_price']) # If the price has changed, add it to the text list
+                last_price = row['current_price']
+            else:
+                # If the price hasn't changed, add an empty string to the text list
+                trace_text.append("")
+
+        # Extend the overall text list with the text values for the current trace
+        text_values.extend(trace_text)
+
+    df['text'] = text_values    # add changed price as new col to df
+
     fig_price_history = px.line(df, x='timestamp', y='current_price', color='name',
                                 labels={'timestamp': 'Timestamp', 'current_price': 'Current Price in €',
                                         'name': 'Tracked Element'},
-                                text="current_price",
+                                text="text",  # Use the 'text' column for the hover text
                                 height=height)
     fig_price_history.update_traces(textposition="top center")
 
@@ -131,7 +154,7 @@ def _init_example_data():
 # call this when add button is clicked
 
 def one_time_track(item):
-    return Crawly.execute_task(None, -1, item)
+    return execute_task(-1, item)
 
 
 def is_not_unique(name, df_tracked_elements, selection):
@@ -145,10 +168,10 @@ def is_not_unique(name, df_tracked_elements, selection):
     return name in filtered_df['name'].values
 
 
-def get_all_names(self):
-    with self.conn.cursor() as cursor:
-        cursor.execute("SELECT DISTINCT name FROM tracked_elements")
-        return [row[0] for row in cursor.fetchall()]
+# def get_all_names(self):
+#     with self.conn.cursor() as cursor:
+#         cursor.execute("SELECT DISTINCT name FROM tracked_elements")
+#         return [row[0] for row in cursor.fetchall()]
 
 
 def gui(db_handler):
@@ -175,7 +198,7 @@ def gui(db_handler):
             else:
                 df_price_history = db_handler.retrieve_price_history(selection['id'].tolist())
 
-            if not selection.empty and not df_price_history.empty:
+            if len(selection) > 0 and len(df_price_history) > 0:
                 # merge price history with corresponding item
                 merged_df = pd.merge(df_price_history, selection[['id', 'name']], left_on='tracked_elements_id',
                                      right_on='id', how='left', suffixes=('_price_history', '_selection'))
@@ -277,6 +300,7 @@ def gui(db_handler):
                         if len(selection) == 1:     # update selected item
                             id_ = int(selection['id'].values[0])
                             db_handler.update_tracked_element(id_, df)
+                            change_update_interval(db_handler.retrieve_tracked_element_by_id(id_))
                             st.write(f'Updated element {name}')
                         else:  # form is disabled if there is more than 1 selection, so this means no selections -> insert new item
                             # item has already been inserted by crawly at this point

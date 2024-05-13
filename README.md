@@ -51,19 +51,19 @@ A Streamlit dashboard serves as the user interface:
 **Troubleshooting Tips:**
 - If online shops block the crawler, alternating between X-PATH and CSS selectors might resolve the issue.
 
-## TODO:
+## List of additional Featurs:
 
 - [x] Selenium Browser integration for a user to select HTML DOM element in question (e.g. Price)
-- [ ] Web Scraper:
+- [x] Web Scraper:
   - [x] Scrape Selected HTML DOM elemets in a predefined time peroid
   - [x] Error handling
   - [x] Mutithreading
-  - [ ] Task planner/cronjobs for timing
-- [ ] Sqlite Database:
+  - [x] Task planner/cronjobs for timing
+- [x] Sqlite Database:
   - [x] Tracked links with elements
   - [x] Price history for every crawl
   - [ ] Optional: multiple users
-- [ ] Streamlit Dashboard:
+- [x] Streamlit Dashboard:
   - [x] List of tracked items
   - [x] Price history per item
   - [ ] Tracking/Notification Settings
