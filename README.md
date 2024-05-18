@@ -37,6 +37,11 @@ A Streamlit dashboard serves as the user interface:
    - Example visualization:
       ![Management Form](resources/management-form.png)
 
+2. **Managing items:**
+    - To add new items, users should complete the management form and click "Save". This is only possible if no items are currently selected in the list. To deselect all items, simply click the "Add" button located below the list.
+    - To modify an item, select it from the list. The management form will display the item's current values, which can be edited and saved.
+    - To delete an item, select it from the list and click "Delete".
+
 ### Technical Aspects
 
 **Webcrawler Configuration:**

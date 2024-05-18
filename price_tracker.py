@@ -165,12 +165,6 @@ def is_not_unique(name, df_tracked_elements, selection):
     return name in filtered_df['name'].values
 
 
-# def get_all_names(self):
-#     with self.conn.cursor() as cursor:
-#         cursor.execute("SELECT DISTINCT name FROM tracked_elements")
-#         return [row[0] for row in cursor.fetchall()]
-
-
 def gui(db_handler):
     df_tracked_elements = db_handler.retrieve_tracked_elements()
     st.title('Price Tracker')
